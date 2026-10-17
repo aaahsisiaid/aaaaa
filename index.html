@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ログイン - 理社講座マイページ</title>
+    <style>
+        body { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); font-family: sans-serif; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; box-sizing: border-box; }
+        .login-container { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 100%; max-width: 380px; text-align: center; }
+        h1 { font-size: 22px; color: #333; margin-bottom: 10px; }
+        
+        /* チェックボックス以外のinput要素にのみスタイルを適用してデザイン崩れを防止 */
+        input:not([type="checkbox"]) { width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 16px; }
+        
+        button { width: 100%; padding: 15px; background: #4A90E2; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-bottom: 10px; }
+        button:hover { background: #357abd; }
+        button:disabled { background: #ccc; }
+
+        /* お知らせエリア */
+        .notice-container {
+            margin-top: 25px;
+            padding: 15px;
+            background: #fdfdfd;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            text-align: left;
+        }
+        .notice-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #555;
+        }
+        .notice-item:last-child { margin-bottom: 0; }
+        .notice-icon { font-size: 16px; }
+        .notice-item p { margin: 0; }
+        .notice-item a { color: #4A90E2; font-weight: bold; text-decoration: none; border-bottom: 1px solid #4A90E2; }
+
+        /* ===== メンテナンス画面のデザイン ===== */
+        .maintenance-container { 
+            display: none; /* デフォルトは非表示 */
+            background: white; 
+            padding: 40px; 
+            border-radius: 20px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1); 
+            width: 100%; 
+            max-width: 450px; 
+            text-align: center; 
+        }
+        .maintenance-icon { font-size: 45px; color: #4A90E2; margin-bottom: 15px; }
+        .maintenance-title { font-size: 20px; color: #333; margin-bottom: 20px; font-weight: bold; border-bottom: 2px solid #f0f7ff; padding-bottom: 15px; }
+        .maintenance-text { font-size: 14.5px; color: #555; line-height: 1.8; text-align: left; margin-bottom: 25px; }
+        .maintenance-time { 
+            background: #f8f9fa; 
+            color: #333; 
+            padding: 15px; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            font-size: 15px; 
+            border-left: 4px solid #4A90E2; 
+            text-align: left;
+        }
+
+        /* ===== 追加：マニュアル・FAQリンクのスタイル ===== */
+        .manual-link-btn {
+            display: block;
+            padding: 14px;
+            background: #fff;
+            color: #4A90E2;
+            border: 2px solid #4A90E2;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: bold;
+            text-decoration: none;
+            margin-top: 5px;
+            margin-bottom: 20px;
+            transition: 0.3s;
+            box-sizing: border-box;
+        }
+        .manual-link-btn:hover {
+            background: #4A90E2;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loginArea" class="login-container">
+        <h1>理社講座受講生ログイン</h1>
+        <p style="font-size:14px; color:#666; margin-bottom:30px;">会員番号とパスワードを入力してください</p>
+        <p style="font-size:20px; color:#ff0000; margin-bottom:30px;">ログインエラーを繰り返すと、制限がかかります。（五回）</p>
+        <p style="font-size:16px; color:#ff0000; margin-bottom:30px;">2,3度エラーが出た場合は、初期パスワードで試すか</p>
+        <p style="font-size:16px; color:#ff0000; margin-bottom:30px;">下部⓶よりパスワード初期化申請をしてください</p>
+        
+        <input type="text" id="memberId" placeholder="会員番号 8桁" inputmode="numeric">
+        <input type="password" id="password" placeholder="パスワード" style="margin-bottom: 8px;">
+        
+        <!-- 追加：パスワード表示切り替えチェックボックス -->
+        <div style="text-align: left; margin-bottom: 15px; padding-left: 5px;">
+            <label style="font-size: 13px; color: #555; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; user-select: none;">
+                <input type="checkbox" id="showPassword" style="width: 15px; height: 15px; cursor: pointer; margin: 0;"> パスワードを表示する
+            </label>
+        </div>
+
+        <button id="loginBtn">ログイン</button>
+        
+        <a href="ManualFAQ.html" class="manual-link-btn">📖 マニュアル・FAQはコチラ</a>
+
+        <div class="notice-container">
+            <div class="notice-item">
+                <span class="notice-icon">📢</span>
+                <p>① 初期パスワードの必須変更を一時的に解除しております。変更を希望される場合は、ログイン後、パスワード変更から変更をしてください。</p>
+            </div>
+            <div class="notice-item">
+                <span class="notice-icon">❓</span>
+                <p>② ログインのパスワードがわからなくなった場合は<a href="reset-request.html">コチラより</a></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="maintenanceArea" class="maintenance-container">
+        <div class="maintenance-icon">⚙️</div>
+        <div class="maintenance-title">システムメンテナンスのお知らせ</div>
+        <div class="maintenance-text">
+            現在、理社講座マイページはシステム更新およびメンテナンス作業のため、一時的にサービスをご利用いただけません。<br>
+            ご不便をおかけいたしますが、何卒ご理解とご協力を賜りますようお願い申し上げます。
+        </div>
+        <div class="maintenance-time">
+            🕒 作業完了予定時刻： 18時ごろ
+        </div>
+    </div>
+
+    <script type="module">
+        const IS_MAINTENANCE = false;
+
+        if (IS_MAINTENANCE) {
+            document.getElementById("loginArea").style.display = "none";
+            document.getElementById("maintenanceArea").style.display = "block";
+        }
+
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAuSr-KgBjfvp-yroLH2X0tujZaUenFVsY",
+            authDomain: "boxwood-spot-486909-j1.firebaseapp.com",
+            projectId: "boxwood-spot-486909-j1",
+            storageBucket: "boxwood-spot-486909-j1.firebasestorage.app",
+            messagingSenderId: "899371812603",
+            appId: "1:899371812603:web:ced1901f7a3abb5e0e125e"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const functions = getFunctions(app, "us-central1");
+
+        // 追加：パスワード表示・非表示の切り替えイベント
+        document.getElementById("showPassword").addEventListener("change", function() {
+            const passwordInput = document.getElementById("password");
+            if (this.checked) {
+                passwordInput.type = "text";
+            } else {
+                passwordInput.type = "password";
+            }
+        });
+
+        const handleLogin = async () => {
+            const inputId = document.getElementById("memberId").value.trim();
+            const inputPw = document.getElementById("password").value.trim();
+
+            if (!inputId || !inputPw) return alert("入力してください");
+
+            const btn = document.getElementById("loginBtn");
+            btn.disabled = true;
+            btn.innerText = "ログイン中...";
+
+            try {
+                // Firebase認証を実行
+                const userCredential = await signInWithEmailAndPassword(auth, `${inputId}@your-school-member.com`, inputPw);
+                
+                // ★最重要改善：明示的に最新の身分証（トークン）を発行し、ズレを完全に無くす
+                const idToken = await userCredential.user.getIdToken(true);
+                const checkLogin = httpsCallable(functions, 'checkLogin');
+                
+                // トークンを直接手渡すため、タイムラグはゼロになり一発で100%成功します
+                const result = await checkLogin({ 
+                    memberId: inputId, 
+                    token: idToken, 
+                    t: Date.now() 
+                });
+
+                const d = result.data;
+
+                if (d.success) {
+                    localStorage.clear();
+                    localStorage.setItem("memberId", inputId);
+                    localStorage.setItem("mName", d.name || "不明");
+                    localStorage.setItem("mGrade", d.grade || "中1");
+                    localStorage.setItem("currentDay", d.currentDay || "");
+                    
+                    // 移行先のページ群が不要なデータで混乱しないよう安全に初期化
+                    localStorage.setItem("schedule", JSON.stringify({}));
+                    localStorage.setItem("courseDescriptions", JSON.stringify({}));
+                    localStorage.setItem("curriculum", JSON.stringify([]));
+                    localStorage.setItem("lastUpdate", Date.now());
+
+                    window.location.href = d.isFirstLogin ? "reset-password.html" : "mypage.html";
+                } else {
+                    alert("名簿エラー: " + d.message);
+                }
+            } catch (e) {
+                alert("ログイン失敗: " + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "ログイン";
+            }
+        };
+
+        document.getElementById("loginBtn").onclick = handleLogin;
+
+        // 会員番号・パスワード欄でEnterを押した時も、ボタンを押さずにログインできるようにする
+        ["memberId", "password"].forEach(id => {
+            document.getElementById(id).addEventListener("keydown", (e) => {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleLogin();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

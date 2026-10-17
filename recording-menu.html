@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>録画メニュー</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* ログイン確認ができるまで画面を隠す設定 */
+        body { display: none; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); font-family: sans-serif; margin: 0; padding: 20px; justify-content: center; align-items: center; min-height: 100vh; }
+        
+        .container { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; box-sizing: border-box; }
+        h1 { font-size: 18px; color: #333; margin-bottom: 25px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .menu-btn { width: 100%; padding: 18px 15px; margin-bottom: 15px; border: 2px solid #4A90E2; border-radius: 12px; background: white; color: #4A90E2; font-size: 15px; font-weight: bold; cursor: pointer; display: block; text-decoration: none; transition: 0.3s; box-sizing: border-box; line-height: 1.4; }
+        .menu-btn:hover { background: #f0f7ff; transform: translateY(-2px); }
+        .special-btn { background: #f0f7ff; }
+        .info-text { display: block; font-size: 14px; color: #d32f2f; margin-top: 6px; font-weight: bold; }
+        .back-link { display: inline-block; margin-top: 15px; color: #888; text-decoration: none; font-size: 14px; transition: 0.2s; }
+        .back-link:hover { text-decoration: underline; color: #4A90E2; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🎬 録画をみる</h2>
+        <h1>授業の録画を見る際は、以下のパスが必要になります。</h1>
+            <span class="info-text">ログイン画面で、「sozoedic55」を入力</span>
+            <span class="info-text">10月の録画パスワード「zt915280@」</span>
+            <span class="info-text">9月の録画パスワード「sn995755@」</span>
+
+        <a href="https://www.sozogakuen.jp/online/" target="_blank" class="menu-btn special-btn">
+            授業の録画をみる
+        </a>
+
+        <a href="recordingsnr.html" class="menu-btn">全学年録画（通常授業）</a>
+        <a href="recordingst.html" class="menu-btn">全学年録画（対策授業）</a>
+
+        <a href="mypage.html" class="back-link">← マイページに戻る</a>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        // 【テスト環境用設定】
+        const firebaseConfig = {
+            apiKey: "AIzaSyAuSr-KgBjfvp-yroLH2X0tujZaUenFVsY",
+            authDomain: "boxwood-spot-486909-j1.firebaseapp.com",
+            projectId: "boxwood-spot-486909-j1",
+            storageBucket: "boxwood-spot-486909-j1.firebasestorage.app",
+            messagingSenderId: "899371812603",
+            appId: "1:899371812603:web:ced1901f7a3abb5e0e125e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // --- 門番（ログインチェック）の処理 ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // ログインしていれば画面を表示する
+                document.body.style.display = "flex";
+            } else {
+                // ログインしていなければ index.html へ強制送還
+                window.location.href = "index.html";
+            }
+        });
+    </script>
+</body>
+</html>

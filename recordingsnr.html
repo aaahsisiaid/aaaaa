@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>通常授業 録画アーカイブ</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1a4321; 
+            --accent: #90a4ae; 
+            --bg: #f2f4f2;
+            --color-bio: #2e7d32; --color-chem: #00bfff; --color-phys: #ff8c00; --color-geo: #8b4513;
+            --color-map: #adff2f; --color-hist: #8a2be2; --color-civ: #1e90ff;
+        }
+        body { font-family: sans-serif; background-color: var(--bg); margin: 0; display: none; }
+        header { background: var(--primary); color: white; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 5px solid var(--accent); }
+        .header-title { margin: 0; font-size: 1.1rem; flex-grow: 1; text-align: center; }
+        .nav-btn { background: rgba(255,255,255,0.15); color: white; padding: 8px 12px; border-radius: 8px; text-decoration: none; font-size: 0.8rem; font-weight: bold; border: 1px solid rgba(255,255,255,0.3); transition: 0.3s; display: flex; align-items: center; gap: 5px; }
+        .nav-btn:hover { background: white; color: var(--primary); }
+        .controls { position: sticky; top: 0; z-index: 100; background: white; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+        .filter-group { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 900px; }
+        .filter-row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; align-items: center; }
+        .filter-label { font-size: 0.7rem; color: #888; font-weight: bold; width: 100%; text-align: center; margin-bottom: -2px; }
+        .btn { padding: 6px 15px; border-radius: 20px; border: 1px solid #ddd; cursor: pointer; background: white; font-weight: bold; font-size: 0.75rem; transition: 0.2s; }
+        .btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .search-box { width: 100%; max-width: 500px; position: relative; margin-top: 5px; }
+        .search-box input { width: 100%; padding: 10px 40px; border: 1px solid #ddd; border-radius: 25px; outline: none; box-sizing: border-box; font-size: 0.9rem; }
+        .search-box i { position: absolute; left: 15px; top: 12px; color: #aaa; }
+        .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; padding: 20px; }
+        .card { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; flex-direction: column; border: 1px solid #eee; text-decoration: none; color: inherit; border-left: 10px solid #ccc; transition: 0.3s; position: relative; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
+        .card.field-生物 { border-left-color: var(--color-bio); }
+        .card.field-化学 { border-left-color: var(--color-chem); }
+        .card.field-物理 { border-left-color: var(--color-phys); }
+        .card.field-地学 { border-left-color: var(--color-geo); }
+        .card[class*="field-地理"] { border-left-color: var(--color-map); }
+        .card[class*="field-歴史"] { border-left-color: var(--color-hist); }
+        .card.field-公民 { border-left-color: var(--color-civ); }
+        .grade-badge { position: absolute; top: 15px; right: 15px; font-size: 0.65rem; padding: 2px 8px; border-radius: 4px; background: #eee; color: #555; font-weight: bold; }
+        .unit-title { font-size: 0.95rem; font-weight: bold; padding: 10px 18px; line-height: 1.4; min-height: 3em; display: flex; align-items: center; }
+        .card-footer { background: #fafafa; padding: 10px 18px; font-size: 0.8rem; display: flex; justify-content: space-between; border-top: 1px solid #f0f0f0; color: var(--primary); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="mypage.html" class="nav-btn"><i class="fas fa-home"></i> <span>ホーム</span></a>
+    <h1 class="header-title">通常授業 録画アーカイブ</h1>
+    <a href="recordingst.html" class="nav-btn">対策授業へ <i class="fas fa-arrow-right"></i></a>
+</header>
+
+<div class="controls">
+    <div class="filter-group">
+        <div class="filter-label">学年で絞り込み</div>
+        <div id="gradeFilterArea" class="filter-row"></div>
+        <div class="filter-label" style="margin-top: 5px;">科目で絞り込み</div>
+        <div id="subjectFilterArea" class="filter-row"></div>
+        <div class="filter-label" style="margin-top: 5px;">分野で絞り込み</div>
+        <div id="fieldFilterArea" class="filter-row"></div>
+    </div>
+    <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="text" id="searchInput" placeholder="単元名で検索..." oninput="render()">
+    </div>
+</div>
+
+<div id="videoGrid" class="video-grid"></div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAuSr-KgBjfvp-yroLH2X0tujZaUenFVsY",
+        authDomain: "boxwood-spot-486909-j1.firebaseapp.com",
+        projectId: "boxwood-spot-486909-j1",
+        storageBucket: "boxwood-spot-486909-j1.firebasestorage.app",
+        messagingSenderId: "899371812603",
+        appId: "1:899371812603:web:ced1901f7a3abb5e0e125e"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const functions = getFunctions(app, "us-central1");
+
+    // ★ 1. 空の配列を用意
+    let allVideos = [];
+
+    // ★ 2. スプレッドシートの「ウェブに公開」で取得したCSV URLをここに貼る
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQBm2FBRFhYfbOq7-mK8JSb7QFuDjgbfMDzmROxSfI1mNdBPr3gwWc6bXf3stytdpVWBtFLSL0A0MRT/pub?output=csv";
+
+    // ★ 3. スプレッドシートからデータを取得する関数
+    async function loadVideosFromSheet() {
+        try {
+            const response = await fetch(CSV_URL);
+            const text = await response.text();
+            
+            // 行ごとに分割
+            const lines = text.split(/\r\n|\n/);
+            allVideos = [];
+
+            // 1行目（ヘッダー）を飛ばして2行目から処理
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                
+                // カンマ区切り（ダブルクォーテーションを考慮した解析）
+                const cols = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
+                
+                if (cols.length >= 6) {
+                    const clean = (text) => text.replace(/^"|"$/g, '').trim();
+                    allVideos.push({
+                        学年: clean(cols[0]),
+                        科目: clean(cols[1]),
+                        分野: clean(cols[2]),
+                        単元名: clean(cols[3]),
+                        難易度: clean(cols[4]),
+                        URL: clean(cols[5])
+                    });
+                }
+            }
+            // データを読み込み終わったら画面を描画
+            updateUI();
+        } catch (error) {
+            console.error("データの読み込みに失敗しました:", error);
+        }
+    }
+
+    // ★修正:なりすまし防止のため、書き換え可能なlocalStorageではなく
+    // ログイン中のFirebase認証情報から会員番号・氏名を取得する
+    let memberId = "";
+    let memberName = "";
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            memberId = user.email.split('@')[0];
+            try {
+                const userDoc = await getDoc(doc(db, "users", memberId));
+                memberName = userDoc.exists() ? (userDoc.data().name || "") : "";
+            } catch (e) {
+                console.error("氏名取得エラー:", e);
+            }
+            document.body.style.display = "block";
+            // ★ ログイン確認後にスプレッドシートから読み込み
+            loadVideosFromSheet();
+        } else {
+            window.location.href = "index.html";
+        }
+    });
+
+    // --- ここから下のフィルター機能や render()、CSSなどは一切変更不要です ---
+    let currentGrade = 'すべて';
+    let currentSubject = 'すべて';
+    let currentField = 'すべて';
+
+    const fieldsBySubject = {
+        'すべて': ["生物", "化学", "物理", "地学", "地理", "歴史", "公民"],
+        '理科': ["生物", "化学", "物理", "地学"],
+        '社会': ["地理", "歴史", "公民"]
+    };
+
+    const createFilters = () => {
+        const gradeArea = document.getElementById('gradeFilterArea');
+        gradeArea.innerHTML = '';
+        ['すべて', '中1', '中2', '中3'].forEach(g => {
+            const btn = document.createElement('button');
+            btn.className = `btn ${currentGrade === g ? 'active' : ''}`;
+            btn.innerText = g;
+            btn.onclick = () => { currentGrade = g; updateUI(); };
+            gradeArea.appendChild(btn);
+        });
+
+        const subjectArea = document.getElementById('subjectFilterArea');
+        subjectArea.innerHTML = '';
+        ['すべて', '理科', '社会'].forEach(s => {
+            const btn = document.createElement('button');
+            btn.className = `btn ${currentSubject === s ? 'active' : ''}`;
+            btn.innerText = s;
+            btn.onclick = () => { currentSubject = s; currentField = 'すべて'; updateUI(); };
+            subjectArea.appendChild(btn);
+        });
+
+        const fieldArea = document.getElementById('fieldFilterArea');
+        fieldArea.innerHTML = '';
+        const fields = ['すべて', ...fieldsBySubject[currentSubject]];
+        fields.forEach(f => {
+            const btn = document.createElement('button');
+            btn.className = `btn ${currentField === f ? 'active' : ''}`;
+            btn.innerText = f;
+            btn.onclick = () => { currentField = f; updateUI(); };
+            fieldArea.appendChild(btn);
+        });
+    };
+
+    const updateUI = () => { createFilters(); render(); };
+
+    window.render = () => {
+        const grid = document.getElementById('videoGrid');
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        grid.innerHTML = '';
+        
+        const filtered = allVideos.filter(v => {
+            const matchGrade = (currentGrade === 'すべて' || v.学年.includes(currentGrade));
+            const matchSubject = (currentSubject === 'すべて' || v.科目 === currentSubject);
+            const matchField = (currentField === 'すべて' || v.分野.includes(currentField));
+            const matchSearch = v.単元名.toLowerCase().includes(query);
+            return matchGrade && matchSubject && matchField && matchSearch;
+        });
+
+        if (filtered.length === 0) {
+            grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1; color:#999; margin-top:50px;">該当する動画がありません。</p>';
+            return;
+        }
+
+        filtered.forEach(v => {
+            const a = document.createElement('a');
+            a.className = `card field-${v.分野}`;
+            a.href = v.URL;
+            a.target = '_blank';
+            
+            a.onclick = () => {
+                const startTime = Date.now();
+                const onFocus = async () => {
+                    const durationSec = Math.round((Date.now() - startTime) / 1000);
+                    if (durationSec > 10) {
+                        try {
+                            const idToken = await auth.currentUser.getIdToken(true);
+                            await httpsCallable(functions, 'recordVideoLog')({
+                                token: idToken,
+                                type: "通常授業",
+                                grade: v.学年,
+                                subject: v.科目,
+                                difficulty: v.難易度,
+                                unitName: v.単元名,
+                                durationSec: durationSec
+                            });
+                            console.log("通常授業 ログ保存完了");
+                        } catch(e) { console.error("Log Error:", e); }
+                    }
+                    window.removeEventListener('focus', onFocus);
+                };
+                window.addEventListener('focus', onFocus);
+            };
+
+            a.innerHTML = `
+                <div style="padding:15px">
+                    <span class="grade-badge">${v.学年}</span>
+                    <div style="font-size:0.7rem; color:#666;">${v.科目} | ${v.分野}</div>
+                    <div class="unit-title">${v.単元名}</div>
+                </div>
+                <div class="card-footer">
+                    <span>視聴を開始する</span>
+                    <i class="fas fa-play-circle"></i>
+                </div>`;
+            grid.appendChild(a);
+        });
+    };
+</script>
+</body>
+</html>

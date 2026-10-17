@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>曜日・講座の変更</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { display: none; background: #f5f7fa; font-family: sans-serif; margin: 0; padding: 10px; justify-content: center; align-items: center; min-height: 100vh; box-sizing: border-box; }
+        .container { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 600px; text-align: center; }
+        h1 { font-size: 20px; color: #333; margin-bottom: 20px; text-align: center; font-weight: bold; }
+        .btn-back { display: flex; align-items: center; justify-content: center; gap: 8px; width: fit-content; margin: 20px auto 0; padding: 10px 25px; background: #f8f9fa; color: #4A90E2; border: 1px solid #4A90E2; border-radius: 10px; font-weight: bold; text-decoration: none; font-size: 13px; transition: 0.2s; }
+        .btn-back:hover { background: #e9ecef; }
+        #loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); display: none; justify-content: center; align-items: center; z-index: 999; font-weight: bold; flex-direction: column; }
+
+        /* ===== 期別登録セクションのスタイル ===== */
+        .period-notice-box {
+            background: #fdf6ec; border: 1px solid #f5dab1; padding: 15px;
+            border-radius: 12px; margin-bottom: 25px; font-size: 13px;
+            color: #e67e22; font-weight: bold; text-align: left;
+            display: flex; align-items: flex-start; gap: 10px; line-height: 1.6;
+        }
+        .period-notice-box i { font-size: 16px; margin-top: 2px; }
+        .period-btn-container {
+            display: flex; flex-direction: column; gap: 15px; margin-bottom: 10px;
+        }
+        .btn-period-link {
+            width: 100%; padding: 16px 15px; color: white;
+            text-decoration: none; border-radius: 12px; font-weight: bold;
+            font-size: 14px; text-align: center; box-sizing: border-box;
+            transition: background 0.15s, transform 0.15s; display: none; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-period-link:hover { transform: translateY(-1px); }
+        
+        /* 各期のボタンカラー */
+        .btn-p1-blue { background: #3498db; box-shadow: 0 4px 0 #2980b9; }
+        .btn-p1-blue:hover { background: #2980b9; }
+        .btn-p2-purple { background: #9b59b6; box-shadow: 0 4px 0 #8e44ad; }
+        .btn-p2-purple:hover { background: #8e44ad; }
+        .btn-p3-green { background: #27ae60; box-shadow: 0 4px 0 #219653; }
+        .btn-p3-green:hover { background: #219653; }
+        .btn-p4-orange { background: #f39c12; box-shadow: 0 4px 0 #e67e22; }
+        .btn-p4-orange:hover { background: #e67e22; }
+
+        /* ボタン無効化（リンク切れ・グレーアウト）のスタイル */
+        .btn-disabled {
+            background: #bdc3c7 !important;
+            box-shadow: 0 4px 0 #95a5a6 !important;
+            pointer-events: none; /* クリックを完全に無効化 */
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+<div id="loading"><div>⏳ 通信中...</div></div>
+
+<div class="container">
+    <h1 id="pageTitle">曜日・講座の追加と変更</h1>
+    
+    <div id="periodNoticeBox" class="period-notice-box">
+        <i class="fas fa-exclamation-circle"></i>
+        <div>各期の登録・変更手続きは、下記の該当する期のボタンから専用ページに移動して行ってください。</div>
+    </div>
+    
+    <div class="period-btn-container">
+        <!-- 第Ⅰ期〜第Ⅳ期までのボタンを常時配置 -->
+        <a href="#" id="btnPeriod1" class="btn-period-link btn-p1-blue"></a>
+        <a href="#" id="btnPeriod2" class="btn-period-link btn-p2-purple"></a>
+        <a href="#" id="btnPeriod3" class="btn-period-link btn-p3-green"></a>
+        <a href="#" id="btnPeriod4" class="btn-period-link btn-p4-orange"></a>
+    </div>
+
+    <a href="mypage.html" class="btn-back"><i class="fas fa-arrow-left"></i> マイページへ戻る</a>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
+
+    // ====================================================
+    // 🛠️ テストモード設定 (true: 全ボタン有効 / false: 通常の自動日付判定)
+    // ====================================================
+    const IS_TEST_MODE = false;
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAuSr-KgBjfvp-yroLH2X0tujZaUenFVsY",
+        authDomain: "boxwood-spot-486909-j1.firebaseapp.com",
+        projectId: "boxwood-spot-486909-j1",
+        storageBucket: "boxwood-spot-486909-j1.firebasestorage.app",
+        messagingSenderId: "899371812603",
+        appId: "1:899371812603:web:ced1901f7a3abb5e0e125e"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const functions = getFunctions(app, "us-central1");
+
+    let currentMemberId = "";
+    let currentGrade = "";
+
+    async function init() {
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                document.body.style.display = "flex";
+                currentMemberId = user.email.split('@')[0];
+                await loadPageData();
+            } else { location.href = "index.html"; }
+        });
+    }
+
+    async function loadPageData() {
+        if (!currentMemberId) return;
+        document.getElementById("loading").style.display = "flex";
+        try {
+            const idToken = await auth.currentUser.getIdToken(true);
+            const res = await httpsCallable(functions, 'checkLogin')({ token: idToken, t: Date.now() });
+            const d = res.data;
+            if (!d || !d.success) throw new Error("データ取得失敗");
+
+            currentGrade = d.grade || "中1";
+
+            renderUI(currentGrade);
+        } catch(e) { alert("エラー: " + e.message); }
+        finally { document.getElementById("loading").style.display = "none"; }
+    }
+
+    function renderUI(grade) {
+        const myGradeKey = grade.includes("中3") ? "中3" : (grade.includes("中2") ? "中2" : "中1");
+        const btnP1 = document.getElementById("btnPeriod1");
+        const btnP2 = document.getElementById("btnPeriod2");
+        const btnP3 = document.getElementById("btnPeriod3");
+        const btnP4 = document.getElementById("btnPeriod4");
+
+        // 日本時間の「本日の日付」を計算して数値化 (例: 20260824)
+        const jstNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+        const currentYMD = (jstNow.getFullYear() * 10000) + ((jstNow.getMonth() + 1) * 100) + jstNow.getDate();
+
+        // 期ごとの遷移先HTMLファイル指定
+        const urlP1 = "courses_j2.html";
+        const urlP2 = "courses_j3.html";
+        const urlP3 = "courses_j4.html";
+        const urlP4 = "courses_j5.html";
+
+        // ボタンの描画状態を設定するヘルパー関数
+        function setBtnState(btn, text, href, isDisabled) {
+            btn.innerHTML = text;
+            if (isDisabled) {
+                btn.removeAttribute("href");
+                btn.classList.add("btn-disabled");
+            } else {
+                btn.setAttribute("href", href);
+                btn.classList.remove("btn-disabled");
+            }
+            btn.style.display = "flex";
+        }
+
+        if (myGradeKey === "中3") {
+            if (IS_TEST_MODE) {
+                // テストモード時は全ボタンを強制的に有効化
+                setBtnState(btnP1, `<i class="fas fa-arrow-circle-right"></i> 第Ⅰ期（4/13～5/29）の登録はコチラから`, urlP1, false);
+                setBtnState(btnP2, `<i class="fas fa-arrow-circle-right"></i> 第Ⅱ期（6/1～7/17）の登録はコチラから`, urlP2, false);
+                setBtnState(btnP3, `<i class="fas fa-arrow-circle-right"></i> 第Ⅲ期（9/7～10/23）の登録はコチラから`, urlP3, false);
+                setBtnState(btnP4, `<i class="fas fa-arrow-circle-right"></i> 第Ⅳ期（11/2～12/18）の登録はコチラから`, urlP4, false);
+            } else {
+                // 通常の日付判定モード
+                setBtnState(btnP1, `<i class="fas fa-lock"></i> 【終了】第Ⅰ期（4/13～5/29）の登録`, urlP1, true);
+                setBtnState(btnP2, `<i class="fas fa-lock"></i> 【終了】第Ⅱ期（6/1～7/17）の登録`, urlP2, true);
+
+                if (currentYMD >= 20261025) {
+                    setBtnState(btnP3, `<i class="fas fa-lock"></i> 【終了】第Ⅲ期（9/7～10/23）の登録`, urlP3, true);
+                } else if (currentYMD >= 20260824) {
+                    setBtnState(btnP3, `<i class="fas fa-arrow-circle-right"></i> 第Ⅲ期（9/7～10/23）の登録はコチラから`, urlP3, false);
+                } else {
+                    setBtnState(btnP3, `<i class="fas fa-calendar-alt"></i> 【8/24登録開始】第Ⅲ期（9/7～10/23）の登録`, urlP3, true);
+                }
+
+                if (currentYMD >= 20261026) {
+                    setBtnState(btnP4, `<i class="fas fa-arrow-circle-right"></i> 第Ⅳ期（11/2～12/18）の登録はコチラから`, urlP4, false);
+                } else {
+                    setBtnState(btnP4, `<i class="fas fa-calendar-alt"></i> 【10/26登録開始】第Ⅳ期（11/2～12/18）の登録`, urlP4, true);
+                }
+            }
+
+        } else if (myGradeKey === "中2" || myGradeKey === "中1") {
+            if (IS_TEST_MODE) {
+                // テストモード時は全ボタンを強制的に有効化
+                setBtnState(btnP1, `<i class="fas fa-arrow-circle-right"></i> 第Ⅰ期（4/13～7/4）の登録はコチラから`, urlP1, false);
+                setBtnState(btnP2, `<i class="fas fa-arrow-circle-right"></i> 第Ⅱ期（7/6～8/29）の登録はコチラから`, urlP2, false);
+                setBtnState(btnP3, `<i class="fas fa-arrow-circle-right"></i> 第Ⅲ期（9/7～11/14）の登録はコチラから`, urlP3, false);
+                setBtnState(btnP4, `<i class="fas fa-arrow-circle-right"></i> 第Ⅳ期（11/30～2/8）の登録はコチラから`, urlP4, false);
+            } else {
+                // 通常の日付判定モード
+                if (currentYMD >= 20260705) {
+                    setBtnState(btnP1, `<i class="fas fa-lock"></i> 【終了】第Ⅰ期（4/13～7/4）の登録`, urlP1, true);
+                } else {
+                    setBtnState(btnP1, `<i class="fas fa-arrow-circle-right"></i> 第Ⅰ期（4/13～7/4）の登録はコチラから`, urlP1, false);
+                }
+
+                if (currentYMD >= 20260830) {
+                    // ★追加：8/30以降はグレーアウト
+                    setBtnState(btnP2, `<i class="fas fa-lock"></i> 【終了】第Ⅱ期（7/6～8/29）の登録`, urlP2, true);
+                } else if (currentYMD >= 20260629) {
+                    setBtnState(btnP2, `<i class="fas fa-arrow-circle-right"></i> 第Ⅱ期（7/6～8/29）の登録はコチラから`, urlP2, false);
+                } else {
+                    setBtnState(btnP2, `<i class="fas fa-calendar-alt"></i> 【6/29登録開始】第Ⅱ期（7/6～8/29）の登録`, urlP2, true);
+                }
+
+                if (currentYMD >= 20261115) {
+                    setBtnState(btnP3, `<i class="fas fa-lock"></i> 【終了】第Ⅲ期（9/7～11/14）の登録`, urlP3, true);
+                } else if (currentYMD >= 20260824) {
+                    setBtnState(btnP3, `<i class="fas fa-arrow-circle-right"></i> 第Ⅲ期（9/7～11/14）の登録はコチラから`, urlP3, false);
+                } else {
+                    setBtnState(btnP3, `<i class="fas fa-calendar-alt"></i> 【8/24登録開始】第Ⅲ期（9/7～11/14）の登録`, urlP3, true);
+                }
+
+                if (currentYMD >= 20261123) {
+                    setBtnState(btnP4, `<i class="fas fa-arrow-circle-right"></i> 第Ⅳ期（11/30～2/8）の登録はコチラから`, urlP4, false);
+                } else {
+                    setBtnState(btnP4, `<i class="fas fa-calendar-alt"></i> 【11/23登録開始】第Ⅳ期（11/30～2/8）の登録`, urlP4, true);
+                }
+            }
+
+        } else {
+            btnP1.style.display = "none";
+            btnP2.style.display = "none";
+            btnP3.style.display = "none";
+            btnP4.style.display = "none";
+        }
+    }
+
+    init();
+</script>
+</body>
+</html>

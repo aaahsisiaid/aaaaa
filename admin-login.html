@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理者ログイン - 理社講座マイページ</title>
+    <style>
+        body { background: linear-gradient(135deg, #2c3e50 0%, #4a5f7a 100%); font-family: sans-serif; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; box-sizing: border-box; }
+        .login-container { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); width: 100%; max-width: 380px; text-align: center; }
+        h1 { font-size: 20px; color: #333; margin-bottom: 8px; }
+        .subtitle { font-size: 13px; color: #888; margin-bottom: 25px; }
+        input { width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 15px; background: #34495e; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #2c3e50; }
+        button:disabled { background: #ccc; }
+        .back-link { display: block; margin-top: 20px; color: #888; text-decoration: none; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>🔒 管理者ログイン</h1>
+        <p class="subtitle">理社講座マイページ 管理者専用ページ</p>
+
+        <input type="email" id="email" placeholder="管理者メールアドレス" autocomplete="username">
+        <input type="password" id="password" placeholder="パスワード" autocomplete="current-password">
+
+        <button id="loginBtn">ログイン</button>
+
+        <a href="index.html" class="back-link">← 生徒用ログインへ戻る</a>
+    </div>
+
+    <script type="module">
+        import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { auth } from "./admin-common.js";
+
+        const loginBtn = document.getElementById("loginBtn");
+
+        loginBtn.onclick = async () => {
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value.trim();
+            if (!email || !password) return alert("入力してください");
+
+            loginBtn.disabled = true;
+            loginBtn.innerText = "ログイン中...";
+
+            try {
+                const cred = await signInWithEmailAndPassword(auth, email, password);
+                const tokenResult = await cred.user.getIdTokenResult(true);
+                if (tokenResult.claims.admin !== true) {
+                    await auth.signOut();
+                    alert("このアカウントには管理者権限がありません。");
+                    return;
+                }
+                window.location.href = "admin.html";
+            } catch (e) {
+                alert("ログイン失敗: " + e.message);
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.innerText = "ログイン";
+            }
+        };
+
+        document.getElementById("password").addEventListener("keydown", (e) => {
+            if (e.key === "Enter") loginBtn.click();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>テスト対策 録画アーカイブ</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #002347; --accent: #c5a059; --bg: #f4f7f9;
+            --color-bio: #2e7d32; --color-chem: #00bfff; --color-phys: #ff8c00; --color-geo: #8b4513;
+            --color-map: #adff2f; --color-hist: #8a2be2; --color-civ: #1e90ff;
+        }
+        body { font-family: sans-serif; background-color: var(--bg); margin: 0; display: none; }
+        header { background: var(--primary); color: white; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 5px solid var(--accent); }
+        .header-title { margin: 0; font-size: 1.1rem; flex-grow: 1; text-align: center; }
+        .nav-group { display: flex; gap: 10px; min-width: 120px; }
+        .nav-btn { background: rgba(255,255,255,0.15); color: white; padding: 8px 12px; border-radius: 8px; text-decoration: none; font-size: 0.8rem; font-weight: bold; border: 1px solid rgba(255,255,255,0.3); transition: 0.3s; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+        .nav-btn:hover { background: white; color: var(--primary); }
+        .password-info { background: #fffbeb; text-align: center; padding: 8px; font-size: 0.85rem; font-weight: bold; color: #92400e; border-bottom: 1px solid #fef3c7; }
+        .controls { position: sticky; top: 0; z-index: 100; background: white; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .filter-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+        .filter-label { font-size: 0.75rem; font-weight: bold; color: #666; width: 50px; text-align: right; }
+        .btn { padding: 8px 15px; border-radius: 5px; border: 1px solid #ddd; cursor: pointer; background: white; font-weight: bold; font-size: 0.8rem; }
+        .btn.active { background: var(--primary); color: white; }
+        .btn.active-accent { background: var(--accent); color: white; }
+        .search-box { width: 100%; max-width: 500px; position: relative; }
+        .search-box input { width: 100%; padding: 10px 40px; border: 1px solid #ddd; border-radius: 25px; outline: none; box-sizing: border-box; }
+        .search-box i { position: absolute; left: 15px; top: 12px; color: #aaa; }
+        .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; }
+        .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .card { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; flex-direction: column; border: 1px solid #eee; text-decoration: none; color: inherit; border-left: 10px solid #ccc; transition: 0.3s; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.15); border-color: var(--accent); }
+        [class*="field-生物"] { border-left-color: var(--color-bio); } [class*="field-化学"] { border-left-color: var(--color-chem); }
+        [class*="field-物理"] { border-left-color: var(--color-phys); } [class*="field-地学"] { border-left-color: var(--color-geo); }
+        [class*="field-地理"] { border-left-color: var(--color-map); } [class*="field-歴史"] { border-left-color: var(--color-hist); }
+        [class*="field-公民"] { border-left-color: var(--color-civ); }
+        .card-body { padding: 18px; flex-grow: 1; position: relative; }
+        .grade-badge { position: absolute; top: 15px; right: 15px; font-size: 0.65rem; padding: 2px 8px; border-radius: 4px; background: #eee; color: #555; font-weight: bold; }
+        .unit-title { font-size: 0.95rem; font-weight: bold; margin: 8px 0 12px 0; line-height: 1.4; height: 2.8em; overflow: hidden; }
+        .level-tag { font-size: 0.7rem; padding: 3px 10px; border-radius: 12px; font-weight: bold; }
+        .level-共通 { background: #f0fdf4; color: #16a34a; } .level-発展 { background: #fef2f2; color: #dc2626; } .level-標準 { background: #e0f2fe; color: #0284c7; }
+        .card-footer { background: #fafafa; padding: 10px 18px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f0f0f0; color: var(--primary); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="nav-group"><a href="mypage.html" class="nav-btn"><i class="fas fa-home"></i> <span>ホーム</span></a></div>
+    <h1 class="header-title">テスト対策 録画アーカイブ</h1>
+    <div class="nav-group" style="justify-content: flex-end;"><a href="recordingsn.html" class="nav-btn">通常録画へ <i class="fas fa-arrow-right"></i></a></div>
+</header>
+
+<div class="password-info">録画視聴パスワード：「my250209@」</div>
+
+<div class="controls">
+    <div class="filter-row">
+        <span class="filter-label">学年:</span>
+        <button class="btn active" onclick="setFilter('grade', 'all', this)">全学年</button>
+        <button class="btn" onclick="setFilter('grade', '中1', this)">中1</button>
+        <button class="btn" onclick="setFilter('grade', '中2', this)">中2</button>
+        <button class="btn" onclick="setFilter('grade', '中3', this)">中3</button>
+    </div>
+    <div class="filter-row">
+        <span class="filter-label">科目:</span>
+        <button class="btn active-accent" onclick="setFilter('subject', 'all', this)">すべて</button>
+        <button class="btn" onclick="setFilter('subject', '理科', this)">理科</button>
+        <button class="btn" onclick="setFilter('subject', '社会', this)">社会</button>
+    </div>
+    <div class="filter-row" id="fieldContainer"><span class="filter-label">分野:</span><button class="btn active-accent" onclick="setFilter('field', 'all', this)">すべて分野</button></div>
+    <div class="filter-row">
+        <span class="filter-label">難易度:</span>
+        <button class="btn active-accent" onclick="setFilter('level', 'all', this)">すべて</button>
+        <button class="btn" onclick="setFilter('level', '共通', this)">共通</button>
+        <button class="btn" onclick="setFilter('level', '標準', this)">標準</button>
+        <button class="btn" onclick="setFilter('level', '発展', this)">発展</button>
+    </div>
+    <div class="search-box"><i class="fas fa-search"></i><input type="text" id="searchInput" placeholder="単元名で検索..." oninput="render()"></div>
+</div>
+
+<div class="container"><div id="videoGrid" class="video-grid"></div></div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
+
+    // テスト環境用Config
+    const firebaseConfig = {
+        apiKey: "AIzaSyAuSr-KgBjfvp-yroLH2X0tujZaUenFVsY",
+        authDomain: "boxwood-spot-486909-j1.firebaseapp.com",
+        projectId: "boxwood-spot-486909-j1",
+        storageBucket: "boxwood-spot-486909-j1.firebasestorage.app",
+        messagingSenderId: "899371812603",
+        appId: "1:899371812603:web:ced1901f7a3abb5e0e125e"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const functions = getFunctions(app, "us-central1");
+
+    // ★修正:なりすまし防止のため、書き換え可能なlocalStorageではなく
+    // ログイン中のFirebase認証情報から会員番号・氏名を取得する
+    let memberId = "";
+    let memberName = "";
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            memberId = user.email.split('@')[0];
+            try {
+                const userDoc = await getDoc(doc(db, "users", memberId));
+                memberName = userDoc.exists() ? (userDoc.data().name || "") : "";
+            } catch (e) {
+                console.error("氏名取得エラー:", e);
+            }
+            document.body.style.display = "block";
+        } else {
+            window.location.href = "index.html";
+        }
+    });
+
+    const allVideos = [
+    {学年:"中1", 科目:"理科", 分野:"生物", 単元名:"身のまわりの生物", 難易度:"標準", URL:"https://zoom.us/rec/share/FvJ1MHArAqZ7ZSe4e-cnC5M9_R3_v0GE5SppZDCVCuRkRJoIs21eM92caaj8Z5bE.ivnJzt3rz2Tq5z0b?startTime=1713872821000" },
+    {学年:"中1", 科目:"理科", 分野:"生物", 単元名:"身のまわりの生物", 難易度:"発展", URL:"https://zoom.us/rec/share/ecaIn_wzuUD-ZWIBgJhHTftQJJPSq-SCUnxKY3XqeA_c7GaynYTgCo2jrpTnlcdP.edadOU09fIKRxDig?startTime=1714218598000" },
+    {学年:"中1", 科目:"理科", 分野:"生物", 単元名:"花のつくり", 難易度:"標準", URL:"https://zoom.us/rec/share/_mM-jj2w5fe-yeRtadGX5HLoOlh69DIimB6-4bCyLsCC6cgIyyM8FrAObyzUmc4D.VqrXCJ0qEUYanORj?startTime=1715168918000" },
+    {学年:"中1", 科目:"理科", 分野:"生物", 単元名:"花のつくり", 難易度:"発展", URL:"https://zoom.us/rec/share/5jpqXTpClk7uwwBzD70kBhWoPYu3OY4TqNYDoGMyQRS9Ir767fBIHLqwrem1VRaV.neXzankYUaPJzbcC?startTime=1714045843000" },
+    {学年:"中1", 科目:"理科", 分野:"生物", 単元名:"植物の分類", 難易度:"標準", URL:"https://zoom.us/rec/share/Wr0kzDOZII_Ny1DwueiiDUyV9ViqdONQMuc1SMbVZsDOBPS0GUXj6wSbV8KGxkwe.Amhdlc7RElefKNal?startTime=1715082531000" },
+    {学年:"中1", 科目:"理科", 分野:"生物", 単元名:"植物の分類", 難易度:"発展", URL:"https://zoom.us/rec/share/uSAu9JC1s8VHte0VJ2b0H3EcFvxzjjz7mmWKQX8yCnaDgrV7lB8o_jem5UtJuFOR.e0R57OWazb5TI0oG?startTime=1717847159000" },
+    {学年:"中1", 科目:"理科", 分野:"生物", 単元名:"動物の分類", 難易度:"標準", URL:"https://zoom.us/rec/share/x7NUDJdfrVIviysk5sL8Y3pyRS46_WQKCMKwIyEzTKtPQx2Pw0mcBqnUglY2yujE.Fu5rPQPZSOquB0Xw?startTime=1718192760000" },
+    {学年:"中1", 科目:"理科", 分野:"生物", 単元名:"動物の分類", 難易度:"発展", URL:"https://zoom.us/rec/share/viWIbkwuOGDhA9KqRLknoPSCsjMq-I155NK5DIP5JSOsJvScX-MFQfofp7ync0tr.GNFI5gjx9DZyUNrd?startTime=1718452025000" },
+    {学年:"中1", 科目:"理科", 分野:"化学", 単元名:"物質の性質", 難易度:"標準", URL:"https://zoom.us/rec/share/Bnf-s1ij3xfPDP4ckwWPeqIvhQQzltRHIPv-HrseC4QvDpU_rJxE58Gbza7V04CO.YjaSvVLIkRBlzo8v?startTime=1727264752000" },
+    {学年:"中1", 科目:"理科", 分野:"化学", 単元名:"物質の性質", 難易度:"発展", URL:"https://zoom.us/rec/share/iFmGKoj8I2oGhTohAX29G0lMnRYdh4X1_Irm3vwfa3ambnXs-lSIN5wQ-zZuGTMM.hKobEDVAldBDYPCk?startTime=1731152795000" },
+    {学年:"中1", 科目:"理科", 分野:"化学", 単元名:"気体の性質", 難易度:"標準", URL:"https://zoom.us/rec/share/GibYjw7-O2CCvowKkTZmN9Ht-wdGNK5MPABDBR7_q33Y3FKonCJoPFHZsHWF2v7I.YFhaXRIccgO3S1Q7?startTime=1738755944000" },
+    {学年:"中1", 科目:"理科", 分野:"化学", 単元名:"気体の性質", 難易度:"発展", URL:"https://zoom.us/rec/share/a6Nas9D6_y8OGrDzLj2931PLgCs_tlolbNmXW4j0Q9Qcr-PE5-qpzQcO96DAtVEr.tDeKbJVcY0vbGz9D?startTime=1738842572000" },
+    {学年:"中1", 科目:"理科", 分野:"化学", 単元名:"水溶液", 難易度:"標準", URL:"https://zoom.us/rec/share/iBhkl8g7MeBGVo_Wj3VkrC9kJgEQ1zdRAZrbxeM7_2nXcRcuYTVMfJwVKmOj8gHw.0V2Rei4MN3sNGGf1?startTime=1732103114000" },
+    {学年:"中1", 科目:"理科", 分野:"化学", 単元名:"水溶液", 難易度:"発展", URL:"https://zoom.us/rec/share/b84cZ4TMssU_YwBs4thjk43tFE-wP0ZZcyipXs4otlsJePrXoZUiAxmpITdTcUAw.u_BkV2BiQtS1ci7N?startTime=1738842556000" },
+    {学年:"中1", 科目:"理科", 分野:"化学", 単元名:"物質の状態変化", 難易度:"標準", URL:"https://zoom.us/rec/share/CKFagb825RfAB8BQ3CcnsZ4nNhy2s_Nvdnmnk9JMGPUEmUK0qUzR1X-TMzbI125C.x1i1l2aAyRtp5S4M?startTime=1732016784000" },
+    {学年:"中1", 科目:"理科", 分野:"化学", 単元名:"物質の状態変化", 難易度:"発展", URL:"https://zoom.us/rec/share/0F5DUO9N5BSa8r8IPJ2zOlncq29A_fT6kDk1iN1xxFeoSVANfK5QpB_c9sNecN-j._Vt6PVs1wIlRDtnW?startTime=1731584848000" },
+    {学年:"中1", 科目:"理科", 分野:"物理", 単元名:"光の性質（反射・屈折）", 難易度:"標準", URL:"https://zoom.us/rec/share/C2zjIJHE-xRnFnSDV3fTSh-i6O_fSZo3-Gkv6SpJrzcIKETWLQzvTS4hDcr88c1x.XCVmdoTk447Eod01?startTime=1731412040000" },
+    {学年:"中1", 科目:"理科", 分野:"物理", 単元名:"光の性質（反射・屈折）", 難易度:"発展", URL:"https://zoom.us/rec/share/_AOjwIAx4PxhOh8yjbscyj0vMwTyj5pIfOxbRY4fX2cPLgfXafmMGGnhHzGo3nVc.MdTerNq2kxZ5kbgv?startTime=1731152839000" },
+    {学年:"中1", 科目:"理科", 分野:"物理", 単元名:"光の性質（凸レンズと像）", 難易度:"標準", URL:"https://zoom.us/rec/share/Yy8MqbSy2aGJIc97pq-j6J6-RvbzJjtJSx8TukMpYJ0XuaUI3MIEVGKwdXeoEA.fEKUyAjFDIOyXEBq?startTime=1738669719000" },
+    {学年:"中1", 科目:"理科", 分野:"物理", 単元名:"光の性質（凸レンズと像）", 難易度:"発展", URL:"https://zoom.us/rec/share/st0XpvK0onJa7FlKWDvpVx4VNBoPDGdIOliewjwGC9GF_tYtzd4DOlWmg5M_i015.aF4m51Hu_K3HEQJV?startTime=1738410431000" },
+    {学年:"中1", 科目:"理科", 分野:"物理", 単元名:"音の性質", 難易度:"標準", URL:"https://zoom.us/rec/share/DPTFITqT71nbv7QWZHxbNgWMd1BdZTmB7r6T5pepJuarQSwM93iaaixOkzROJDYU.7CmcOa9nFcZxZvDG?startTime=1731498315000" },
+    {学年:"中1", 科目:"理科", 分野:"物理", 単元名:"音の性質", 難易度:"発展", URL:"https://zoom.us/rec/share/DHtymdRlLgQ9ebT2qkwi3A8WbHvz5IHAxd2CIiTgPk2AAefyHHgT8OhwglQeu1Vf.6P0VHJCZBxUo_kKx?startTime=1731757533000" },
+    {学年:"中1", 科目:"理科", 分野:"物理", 単元名:"力のはたらき", 難易度:"標準", URL:"https://zoom.us/rec/share/K93nq0_T-J0k89GiuNF16WXQrd6WTHSpnTSOhcH10lzC7bwF1DDB_g9YyznZFhBC.2gihP73tMal9-V6Y?startTime=1739965553000" },
+    {学年:"中1", 科目:"理科", 分野:"物理", 単元名:"力のはたらき", 難易度:"発展", URL:"https://zoom.us/rec/share/8w71OWaynN3TMIqmsRhri1wQW4sWGjR5LniHLYNS7Ambo-Qdq8Wp0yuaGxxIWJyU.lz3NGBKZI5x9VZh1?startTime=1739015171000" },
+    {学年:"中1", 科目:"理科", 分野:"地学", 単元名:"火山と火成岩", 難易度:"標準", URL:"https://zoom.us/rec/share/Py0ECvVlDHyodlMeXFSddbpF76nzj0RQBzUbdWLdbmjUdfQ5vI1KlMlcRJf3Rren.aKiWYlUMU-bhNnFx?startTime=1738669531000" },
+    {学年:"中1", 科目:"理科", 分野:"地学", 単元名:"火山と火成岩", 難易度:"発展", URL:"https://zoom.us/rec/share/Mw1VIghbEx-bDBTZZSehclXkZvTatia_AYV-SDWYc0tgcU8-cV2rlSDiTx5usEPe.thuVvKtrZdZ4TGTx?startTime=1739447232000" },
+    {学年:"中1", 科目:"理科", 分野:"地学", 単元名:"地震", 難易度:"標準", URL:"https://zoom.us/rec/share/ufdHzN0W_melXYsZ5QGgx6uSc02myzqbOT5GM8UPnFJv6JZ2EjGUTrSDkG-TgDXQ.T9fuoAWYKrU5yksB?startTime=1731498355000" },
+    {学年:"中1", 科目:"理科", 分野:"地学", 単元名:"地震", 難易度:"発展", URL:"https://zoom.us/rec/share/lOTm_F2IIUrlk0XdOlcYOdXdEwNAR6JzA8ZEYmPBQ8Tw21qrVN5e58v4ZItEJZPF.AcO4iWnQ6UM4tqdb?startTime=1739620067000" },
+    {学年:"中1", 科目:"理科", 分野:"地学", 単元名:"地層", 難易度:"標準", URL:"https://zoom.us/rec/share/lwsZP3ZxbT_Ujq3X4lTxY7_AtdndpZvCUb3N3tsMm_HRs39Jd3dEb14YOEshuhc.u0pHw65MqlPwVhup?startTime=1739274401000" },
+    {学年:"中1", 科目:"理科", 分野:"地学", 単元名:"地層", 難易度:"発展", URL:"https://zoom.us/rec/share/5yI1L0dxcCw6yE_uQ4D8TsSVEpyT3-qywghiWRAtj8x7bwxTB8FmR_2X1kra6Pw.wz-p-lS5n35vZyII?startTime=1740052025000" },
+    {学年:"中2", 科目:"理科", 分野:"生物", 単元名:"生物と細胞", 難易度:"共通", URL:"https://zoom.us/rec/share/oQKX0uYXa-7LVjszCZ8wR6mMlTDRahBRH-Gu80DEh6JM_txAhB3bu9eLP6aGbtho.gHgoz_nEt94jmCgO?startTime=1713867663000" },
+    {学年:"中2", 科目:"理科", 分野:"生物", 単元名:"根茎葉のはたらき", 難易度:"共通", URL:"https://zoom.us/rec/share/Gz0KJgba2LKrzcKfnSwKvjqjy15L7Jr3R3Nev07mvfy4-ncOpAUSabL_HCSvJ-NM.VAvvDXjfVvQgW8Ja?startTime=1731147635000" },
+    {学年:"中2", 科目:"理科", 分野:"生物", 単元名:"消化と吸収", 難易度:"共通", URL:"https://zoom.us/rec/share/j9UFw5VR5sO7npeCQu_VGBe-dWs2f0Ueu9xCBTLisxwsll6JF1SGtATkgH7yeFg3.e3IBZkdwDIbDPJFS?startTime=1731406825000" },
+    {学年:"中2", 科目:"理科", 分野:"生物", 単元名:"血液の循環、呼吸", 難易度:"共通", URL:"https://zoom.us/rec/share/DPTFITqT71nbv7QWZHxbNgWMd1BdZTmB7r6T5pepJuarQSwM93iaaixOkzROJDYU.7CmcOa9nFcZxZvDG?startTime=1731493231000" },
+    {学年:"中2", 科目:"理科", 分野:"生物", 単元名:"刺激と反応，排出", 難易度:"共通", URL:"https://zoom.us/rec/share/aG-srTwwPtNn-V6HqF89GQihltFwY9YZdxnE7jX08HR6jJugspLN8DHWPY2NDUwl.TtZWeAaE5Me1LbcS?startTime=1731579807000" },
+    {学年:"中2", 科目:"理科", 分野:"化学", 単元名:"物質の分解", 難易度:"標準", URL:"https://zoom.us/rec/share/FvJ1MHArAqZ7ZSe4e-cnC5M9_R3_v0GE5SppZDCVCuRkRJoIs21eM92caaj8Z5bE.ivnJzt3rz2Tq5z0b?startTime=1713867726000" },
+    {学年:"中2", 科目:"理科", 分野:"化学", 単元名:"物質の分解", 難易度:"発展", URL:"https://zoom.us/rec/share/hqufR6S3mvM89XCr8UgZqH06uuXfUmQaE_MdV55sNN42Rj9ZA_FwpB268vsVvU3r.PCDTEHeIu07JH3-7?startTime=1738405413000" },
+    {学年:"中2", 科目:"理科", 分野:"化学", 単元名:"原子と分子，化学反応式", 難易度:"標準", URL:"https://zoom.us/rec/share/Wr0kzDOZII_Ny1DwueiiDUyV9ViqdONQMuc1SMbVZsDOBPS0GUXj6wSbV8KGxkwe.Amhdlc7RElefKNal?startTime=1715077445000" },
+    {学年:"中2", 科目:"理科", 分野:"化学", 単元名:"原子と分子、化学反応式", 難易度:"発展", URL:"https://zoom.us/rec/share/b84cZ4TMssU_YwBs4thjk43tFE-wP0ZZcyipXs4otlsJePrXoZUiAxmpITdTcUAw.u_BkV2BiQtS1ci7N?startTime=1738837415000" },
+    {学年:"中2", 科目:"理科", 分野:"化学", 単元名:"物質どうしが結びつく化学変化", 難易度:"標準", URL:"https://zoom.us/rec/share/sDzJeQBamT46CD_dQ48V4UBGrefhlsqpcuZeSwII5mie_fN83tlCBsJnG7HN7LZn.sx1x-2JP6tmEUi_t?startTime=1726568458000" },
+    {学年:"中2", 科目:"理科", 分野:"化学", 単元名:"物質どうしが結びつく化学変化", 難易度:"発展", URL:"https://zoom.us/rec/share/8w71OWaynN3TMIqmsRhri1wQW4sWGjR5LniHLYNS7Ambo-Qdq8Wp0yuaGxxIWJyU.lz3NGBKZI5x9VZh1?startTime=1739010046000" },
+    {学年:"中2", 科目:"理科", 分野:"化学", 単元名:"酸化と還元、化学変化と熱", 難易度:"標準", URL:"https://zoom.us/rec/share/XKoCkGccwVBVC6GToNLjW9u1t0t95cM_Qr9nprE0DmJ88pxCtgG5TP44iCD7p2gW.Ne4ilq0BJgz2XG8J?startTime=1728123672000" },
+    {学年:"中2", 科目:"理科", 分野:"化学", 単元名:"酸化と還元、化学変化と熱", 難易度:"発展", URL:"https://zoom.us/rec/share/hCX5DZkQtVemm_CQHj6wXXP6Ma1zVwD9l3pdi_tawJKk-QfQsS-b8YhKY_y7IiyW.HAm49-j9hqvAe8a8?startTime=1739614902000" },
+    {学年:"中2", 科目:"理科", 分野:"化学", 単元名:"化学変化と物質の質量", 難易度:"標準", URL:"https://zoom.us/rec/share/lwsZP3ZxbT_Ujq3X4lTxY7_AtdndpZvCUb3N3tsMm_HRs39Jd3dEb14YOEshuhc.u0pHw65MqlPwVhup?startTime=1739269337000" },
+    {学年:"中2", 科目:"理科", 分野:"化学", 単元名:"化学変化と物質の質量", 難易度:"発展", URL:"https://zoom.us/rec/share/dXvxGE2b-rQQxa3ZCRvUxPk44DgMSC5SYbFujf59RXttOJVwvnDTKL8bWOFyA_QU.y0DmaY9O6sx_GAKW?startTime=1739010048000" },
+    {学年:"中2", 科目:"理科", 分野:"物理", 単元名:"回路の電流・電圧", 難易度:"標準", URL:"https://zoom.us/rec/share/Py0ECvVlDHyodlMeXFSddbpF76nzj0RQBzUbdWLdbmjUdfQ5vI1KlMlcRJf3Rren.aKiWYlUMU-bhNnFx?startTime=1738664466000" },
+    {学年:"中2", 科目:"理科", 分野:"物理", 単元名:"回路の電流・電圧", 難易度:"発展", URL:"https://zoom.us/rec/share/r9e8bCKqg8Fv1KkNj8YgvSYI_OOSUdjRct_1OlyBLnojm4baCxZNRznv1MPbAQJg.ieHxtkC_Ns1M1qTL?startTime=1738405245000" },
+    {学年:"中2", 科目:"理科", 分野:"物理", 単元名:"電流と電圧の関係", 難易度:"標準", URL:"https://zoom.us/rec/share/GibYjw7-O2CCvowKkTZmN9Ht-wdGNK5MPABDBR7_q33Y3FKonCJoPFHZsHWF2v7I.YFhaXRIccgO3S1Q7?startTime=1738750829000" },
+    {学年:"中2", 科目:"理科", 分野:"物理", 単元名:"電流と電圧の関係", 難易度:"発展", URL:"https://zoom.us/rec/share/a6Nas9D6_y8OGrDzLj2931PLgCs_tlolbNmXW4j0Q9Qcr-PE5-qpzQcO96DAtVEr.tDeKbJVcY0vbGz9D?startTime=1738837414000" },
+    {学年:"中2", 科目:"理科", 分野:"物理", 単元名:"電力と発熱", 難易度:"標準", URL:"https://zoom.us/rec/share/gx5lr3S39eyPqVLbbYkRKIAJHuQNAwNTujtRJ-xOZ8F5mMvrjDmaG69C0bhEgwTv.tlOPeSM9xlW_m8Ul?startTime=1727518962000" },
+    {学年:"中2", 科目:"理科", 分野:"物理", 単元名:"電力と発熱", 難易度:"発展", URL:"https://zoom.us/rec/share/kQVk5XRdPkc7eIynkQe5cXs6M-Ox0-3ZczdTts-wcaeT-ckUT-E-mjItZ-lgCOtc.Vht9tUs4UlSrAnci?startTime=1739442258000" },
+    {学年:"中2", 科目:"理科", 分野:"物理", 単元名:"静電気と電流", 難易度:"標準", URL:"https://zoom.us/rec/share/RSgsUBEaJ1kcvSAuecvXcjg8CnqOrojUd8-Ict3XQ4YZJR4Aub_057KvESohPN4Q.gPSJ7W8HmcaxdrBW?startTime=1739355680000" },
+    {学年:"中2", 科目:"理科", 分野:"物理", 単元名:"静電気と電流", 難易度:"発展", URL:"https://zoom.us/rec/share/Mw1VIghbEx-bDBTZZSehclXkZvTatia_AYV-SDWYc0tgcU8-cV2rlSDiTx5usEPe.thuVvKtrZdZ4TGTx?startTime=1739442173000" },
+    {学年:"中2", 科目:"理科", 分野:"物理", 単元名:"電流と磁界", 難易度:"標準", URL:"https://zoom.us/rec/share/CRmEJYPbXHLY04-Pr1pIJPEQcrqElE4e8KA7zzfhMDQBBOEgk4EzGuLvU-gKyuR2.NKReij6ijm9H0s5O?startTime=1739874105000" },
+    {学年:"中2", 科目:"理科", 分野:"地学", 単元名:"電流と磁界", 難易度:"発展", URL:"https://zoom.us/rec/share/TNegeCtRJJneEj73n38_ZNM5lsn-MHa67Dg9lT2t36Zrgg7fpnzXQPegPFERz7NQ.MVVsQuB7KfB3HSZ6?startTime=1738837249000" },
+    {学年:"中2", 科目:"理科", 分野:"地学", 単元名:"圧力", 難易度:"標準", URL:"https://zoom.us/rec/share/8MOqjFjbtIyhSZNGxf8n8saczBUPe66Yj27yPr8NR-0iivySMoyH1RLzkj8tptE5.ItRlzPLgliMr3v0D?startTime=1727259987000" },
+    {学年:"中2", 科目:"理科", 分野:"地学", 単元名:"圧力", 難易度:"発展", URL:"https://zoom.us/rec/share/ZA58-fs2aKtcCaPvJAu2y_1xign7Jh7zPpIpY9Wtgc5C-8wwenNqQ23xKN1rkTRI.GYTargOvJNO7USgW?startTime=1738405297000" },
+    {学年:"中2", 科目:"理科", 分野:"地学", 単元名:"気象観測・雲", 難易度:"標準", URL:"https://zoom.us/rec/share/RtV5NgTL_rpYTUKBAw17DTF41St8-ia_K3XAaE62XefGwkzFrVx3wZ_8srEu4FSV.wUmXew0q0A9hl8Z0?startTime=1726655113000" },
+    {学年:"中2", 科目:"理科", 分野:"地学", 単元名:"気象観測・雲", 難易度:"発展", URL:"https://zoom.us/rec/share/xastK2ym3vpVU9v__R8RhPy8A3KCDrLbqbYil4pS3k3b3OGyfbZnRRTxjK8GDhFE.eWz7josYXKi5dUbG?startTime=1726914359000" },
+    {学年:"中2", 科目:"理科", 分野:"地学", 単元名:"前線（高気圧・低気圧含む）", 難易度:"標準", URL:"https://zoom.us/rec/share/Yy8MqbSy2aGJIc97pq-j6J6-RvbzJjtJSx8TukMpYJ0XuaUI3MIEVGKwdXeoEA.fEKUyAjFDIOyXEBq?startTime=1738664622000" },
+    {学年:"中2", 科目:"理科", 分野:"地学", 単元名:"前線（高気圧・低気圧含む）", 難易度:"発展", URL:"https://zoom.us/rec/share/st0XpvK0onJa7FlKWDvpVx4VNBoPDGdIOliewjwGC9GF_tYtzd4DOlWmg5M_i015.aF4m51Hu_K3HEQJV?startTime=1738405299000" },
+    {学年:"中2", 科目:"理科", 分野:"地学", 単元名:"日本の天気", 難易度:"標準", URL:"https://zoom.us/rec/share/uVnQ5NfW3J5F-MFfNa6Xd_I32KdeOQdxoY5Vf0p0FkNYB6bcDcPYGjn98dTsMsAP.B8kdavd9pYdWyyL2?startTime=1739269279000" },
+    {学年:"中2", 科目:"理科", 分野:"地学", 単元名:"日本の天気", 難易度:"発展", URL:"https://zoom.us/rec/share/wM_YOkrxgvbXboJCGzrMcp2IyHbxy1sUzX4S1MtrcN6kNk6WlQI6RhOgGiaRytkH.hL9s1c3vVV2a3-dg?startTime=1739010109000" },
+    {学年:"中3", 科目:"理科", 分野:"生物", 単元名:"細胞分裂，生殖", 難易度:"標準", URL:"https://zoom.us/rec/share/UjmEZDOj5ePwcPVJ8Fcf0aHhCeic5fPvPJZGBZ-jy7q_NflA227UX8Xz2kJWbpJa.774Urv5MNu4_UlAn?startTime=1713781385000" },
+    {学年:"中3", 科目:"理科", 分野:"生物", 単元名:"細胞分裂，生殖", 難易度:"発展", URL:"https://zoom.us/rec/share/UjmEZDOj5ePwcPVJ8Fcf0aHhCeic5fPvPJZGBZ-jy7q_NflA227UX8Xz2kJWbpJa.774Urv5MNu4_UlAn?startTime=1713786360000" },
+    {学年:"中3", 科目:"理科", 分野:"生物", 単元名:"遺伝", 難易度:"標準", URL:"https://zoom.us/rec/share/EHIvKTmQ4maNvvkffQ_UQJ10CBO1ghcfKlVz9JK9tvOSRS4KgsO8XJD2ubBqZrw.aX0JYtROtBXk1UPJ?startTime=1714990928000" },
+    {学年:"中3", 科目:"理科", 分野:"生物", 単元名:"遺伝", 難易度:"発展", URL:"https://zoom.us/rec/share/EHIvKTmQ4maNvvkffQ_UQJ10CBO1ghcfKlVz9JK9tvOSRS4KgsO8XJD2ubBqZrw.aX0JYtROtBXk1UPJ?startTime=1714995999000" },
+    {学年:"中3", 科目:"理科", 分野:"生物", 単元名:"自然界のつながり", 難易度:"標準", URL:"https://zoom.us/rec/share/XeCPRGZrP68RIf7LyVGDXsi9U2eznwJtzVK7I8rRi6poweaE9VitSIW-sF-Av8KC.j3sQzTuI5eq3D-1F?startTime=1718014984000" },
+    {学年:"中3", 科目:"理科", 分野:"生物", 単元名:"自然界のつながり", 難易度:"発展", URL:"https://zoom.us/rec/share/XeCPRGZrP68RIf7LyVGDXsi9U2eznwJtzVK7I8rRi6poweaE9VitSIW-sF-Av8KC.j3sQzTuI5eq3D-1F?startTime=1718020175000" },
+    {学年:"中3", 科目:"理科", 分野:"化学", 単元名:"水溶液とイオン", 難易度:"標準", URL:"https://zoom.us/rec/share/9Pf3rhWiIvQQck1GLbdVALDXyRxXewhZm1mnkAjbPX3E9dnoc4zKg9K2QIBvLE6w.SKoiL3c4aiq3h7EO?startTime=1713781248000" },
+    {学年:"中3", 科目:"理科", 分野:"化学", 単元名:"水溶液とイオン", 難易度:"発展", URL:"https://zoom.us/rec/share/9Pf3rhWiIvQQck1GLbdVALDXyRxXewhZm1mnkAjbPX3E9dnoc4zKg9K2QIBvLE6w.SKoiL3c4aiq3h7EO?startTime=1713786356000" },
+    {学年:"中3", 科目:"理科", 分野:"化学", 単元名:"電池", 難易度:"標準", URL:"https://zoom.us/rec/share/YKmJLQmPA9sMaOa1aU031BnXa_1iUfv88RZrLlT9s2LZ1IFX1wJB3CqpZItz9Cpa.ZXpP91aRqVZzMjsL?startTime=1727086919000" }, // ★「分分野」から「分野」に修正しました
+    {学年:"中3", 科目:"理科", 分野:"化学", 単元名:"電池", 難易度:"発展", URL:"https://zoom.us/rec/share/YKmJLQmPA9sMaOa1aU031BnXa_1iUfv88RZrLlT9s2LZ1IFX1wJB3CqpZItz9Cpa.ZXpP91aRqVZzMjsL?startTime=1727092046000" },
+    {学年:"中3", 科目:"理科", 分野:"化学", 単元名:"酸・アルカリとイオン", 難易度:"標準", URL:"https://zoom.us/rec/share/0OlweTuLq_GBo7Mw7f7j-Q2o7QFh5aPkrW4xCUD2MOdRd82WTE2EDrxznt1vgbGt.x8Ue3621gyZWsvP3?startTime=1718360465000" },
+    {学年:"中3", 科目:"理科", 分野:"化学", 単元名:"酸・アルカリとイオン", 難易度:"発展", URL:"https://zoom.us/rec/share/0OlweTuLq_GBo7Mw7f7j-Q2o7QFh5aPkrW4xCUD2MOdRd82WTE2EDrxznt1vgbGt.x8Ue3621gyZWsvP3?startTime=1718365564000" },
+    {学年:"中3", 科目:"理科", 分野:"化学", 単元名:"中和", 難易度:"標準", URL:"https://zoom.us/rec/share/CyzjSixvUR0_YQYoTfxlJRzp1aZVAnaMq9R-dqMbeLIs5jtTQiSTDWGAeDNorcVO.Zg573_TzfT1Iasxc?startTime=1718619710000" },
+    {学年:"中3", 科目:"理科", 分野:"化学", 単元名:"中和", 難易度:"発展", URL:"https://zoom.us/rec/share/CyzjSixvUR0_YQYoTfxlJRzp1aZVAnaMq9R-dqMbeLIs5jtTQiSTDWGAeDNorcVO.Zg573_TzfT1Iasxc?startTime=1718624871000" },
+    {学年:"中3", 科目:"理科", 分野:"物理", 単元名:"水圧・浮力", 難易度:"標準", URL:"https://zoom.us/rec/share/Om52SbFvy4L8YqE4A4rC4t4NNFY9dj0VWJL8GDg_3JCLgUeKyuIiFpp7SMWppae1.mGg0A8-mJEsYHOxk?startTime=1715336462000" },
+    {学年:"中3", 科目:"理科", 分野:"物理", 単元名:"水圧・浮力", 難易度:"発展", URL:"https://zoom.us/rec/share/Om52SbFvy4L8YqE4A4rC4t4NNFY9dj0VWJL8GDg_3JCLgUeKyuIiFpp7SMWppae1.mGg0A8-mJEsYHOxk?startTime=1715341564000" },
+    {学年:"中3", 科目:"理科", 分野:"物理", 単元名:"力の合成・分解", 難易度:"標準", URL:"https://zoom.us/rec/share/ijXHL-FfEBOkaUkSAwcEb6r5Z803L4qLtCDGe_vD56afzbCqs6ULlkj5bvtAb5BV.jHvCsBqZRcun8TyR?startTime=1717410111000" },
+    {学年:"中3", 科目:"理科", 分野:"物理", 単元名:"力の合成・分解", 難易度:"発展", URL:"https://zoom.us/rec/share/ijXHL-FfEBOkaUkSAwcEb6r5Z803L4qLtCDGe_vD56afzbCqs6ULlkj5bvtAb5BV.jHvCsBqZRcun8TyR?startTime=1717415264000" },
+    {学年:"中3", 科目:"理科", 分野:"物理", 単元名:"力と運動", 難易度:"標準", URL:"https://zoom.us/rec/share/kZ7ntbxfAXXBmKpxx0kgbEUXLDJbgycwR-DqcqaVMzWaMKu3w1lXAGuycgi-QbZN.hIYn6GywPmbwoeS4?startTime=1718619660000" },
+    {学年:"中3", 科目:"理科", 分野:"物理", 単元名:"力と運動", 難易度:"発展", URL:"https://zoom.us/rec/share/kZ7ntbxfAXXBmKpxx0kgbEUXLDJbgycwR-DqcqaVMzWaMKu3w1lXAGuycgi-QbZN.hIYn6GywPmbwoeS4?startTime=1718624829000" },
+    {学年:"中3", 科目:"理科", 分野:"物理", 単元名:"仕事", 難易度:"標準", URL:"https://zoom.us/rec/share/DbfJbBxVt4WC42czV9fgf3Mw3weYhaVEuaMJhdfLdJuADxXIiM3zJBr_Vci0-qNA.RsL17w2DCApMJTwP?startTime=1727691842000" },
+    {学年:"中3", 科目:"理科", 分野:"物理", 単元名:"仕事", 難易度:"発展", URL:"https://zoom.us/rec/share/DbfJbBxVt4WC42czV9fgf3Mw3weYhaVEuaMJhdfLdJuADxXIiM3zJBr_Vci0-qNA.RsL17w2DCApMJTwP?startTime=1727696761000" },
+    {学年:"中3", 科目:"理科", 分野:"物理", 単元名:"力学的エネルギー", 難易度:"標準", URL:"https://zoom.us/rec/share/qbg3-6zWY6NKt2jN5wm5fLyLmsy2vWAi15TOhe8K5ZGUSnBZEaOt2MYl7wQEnJsH.eyeg-e1CGukLbpGY?startTime=1728037338000" },
+    {学年:"中3", 科目:"理科", 分野:"物理", 単元名:"力学的エネルギー", 難易度:"発展", URL:"https://zoom.us/rec/share/qbg3-6zWY6NKt2jN5wm5fLyLmsy2vWAi15TOhe8K5ZGUSnBZEaOt2MYl7wQEnJsH.eyeg-e1CGukLbpGY?startTime=1728042339000" },
+    {学年:"中3", 科目:"理科", 分野:"地学", 単元名:"太陽と星の日周運動", 難易度:"標準", URL:"https://zoom.us/rec/share/omn4dtNtLcz-Qryr20RDW5g5plxBvT29dpgcA23MRHDdUMIWZzKFQw2AqniV3ss5.1kCFl8GBrBdHPLzu?startTime=1727086960000" },
+    {学年:"中3", 科目:"理科", 分野:"地学", 単元名:"太陽と星の日周運動", 難易度:"発展", URL:"https://zoom.us/rec/share/omn4dtNtLcz-Qryr20RDW5g5plxBvT29dpgcA23MRHDdUMIWZzKFQw2AqniV3ss5.1kCFl8GBrBdHPLzu?startTime=1727091964000" },
+    {学年:"中3", 科目:"理科", 分野:"地学", 単元名:"太陽と星の年周運動", 難易度:"標準", URL:"https://zoom.us/rec/share/noC3oXd0-nFmwdcAV1UEuFHpLMFtoFIOa5nxvhD7bUL1FSf82sQ7yxQ3n8wYc-36.r1hEPFLGmr1H2eTc?startTime=1727691832000" },
+    {学年:"中3", 科目:"理科", 分野:"地学", 単元名:"太陽と星の年周運動", 難易度:"発展", URL:"https://zoom.us/rec/share/noC3oXd0-nFmwdcAV1UEuFHpLMFtoFIOa5nxvhD7bUL1FSf82sQ7yxQ3n8wYc-36.r1hEPFLGmr1H2eTc?startTime=1727696851000" },
+    {学年:"中3", 科目:"理科", 分野:"地学", 単元名:"太陽と月", 難易度:"標準", URL:"https://zoom.us/rec/share/A9YkbgIXPBR0u1lg35OdT2ofj1_UUS8-cHqKBU6eV_lQ1r3N1qbvGdlojpYgQBUN.l5bkn91wLPrHjXmv?startTime=1731930574000" },
+    {学年:"中3", 科目:"理科", 分野:"地学", 単元名:"太陽と月", 難易度:"発展", URL:"https://zoom.us/rec/share/A9YkbgIXPBR0u1lg35OdT2ofj1_UUS8-cHqKBU6eV_lQ1r3N1qbvGdlojpYgQBUN.l5bkn91wLPrHjXmv?startTime=1731930574000" },
+    {学年:"中3", 科目:"理科", 分野:"地学", 単元名:"太陽系", 難易度:"標準", URL:"https://zoom.us/rec/share/iS8Egr0OOwpy1jZHeD6DRiwnEwGhWkpR7E_3Nl4H2n91rpMEYf48GqeKfsxQf3RZ.1xSXaBA29vQ4ct3H?startTime=1726827756000" },
+    {学年:"中3", 科目:"理科", 分野:"地学", 単元名:"太陽系", 難易度:"発展", URL:"https://zoom.us/rec/share/iS8Egr0OOwpy1jZHeD6DRiwnEwGhWkpR7E_3Nl4H2n91rpMEYf48GqeKfsxQf3RZ.1xSXaBA29vQ4ct3H?startTime=1726832833000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"地理", 単元名:"地球の姿", 難易度:"共通", URL:"https://zoom.us/rec/share/NqXyYBW8pCVtCCfU2H806mBEFFdOuzu8-2h_d8wgbaWJ5qXmLDEiGvdYjM7cZped.z1ATbNDgeCXelZ3N?startTime=1713867676000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"地理", 単元名:"世界の姿", 難易度:"共通", URL:"https://zoom.us/rec/share/PiLl0rl4mBFBESiAngujpCbiY5X5dCfCesOVC-SV7wxC_6FG44r24ytycsBNT7lM.6DvvNsiC4Ssd6q9d?startTime=1714040435000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"地理", 単元名:"日本の位置と領域", 難易度:"共通", URL:"https://zoom.us/rec/share/EdwiF-u8ncdYIB9uM1SbJrhV-sZS2E4cv3i6O0hQmfLZgS_LIy9Xw5On6MPcTgCt.WQtUo4Zh-SAZKOcC?startTime=1713954045000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"地理", 単元名:"日本の地域区分と都道府県", 難易度:"共通", URL:"https://zoom.us/rec/share/eTfj-vitBNsyJ1Pvs3WaFu0pKJ2zb0ahRStOAU0WnPq9BDxKd37KyHCDgA3ls1-i.V96q_voDB7YH9ZnX?startTime=1717669250000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"地理", 単元名:"世界の気候", 難易度:"共通", URL:"https://zoom.us/rec/share/PiJJonrjOPAnRB3FO50sS41gUcG9oeQWI6J4K6nfuQprWL7WkDV_E6K9HgaLd410.6s2Z9rCWftDHT5cN?startTime=1717842041000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"地理", 単元名:"世界のくらしと文化", 難易度:"共通", URL:"https://zoom.us/rec/share/7c7-5IqTTdX6NgoT4wAFEcSaJQr6n_f--Mq082LlB6SHgrAjyOIOScEYvS43AL0v.sK2uKX9NjLHUMNc0?startTime=1749118862000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"地理", 単元名:"アジア州", 難易度:"共通", URL:"https://zoom.us/rec/share/K4SMXc55Z9rEGJsZTtaJ-OQMpHD7hS0T65jDQNcVesUz7Wer-QmjvOYrto9z0BfE.fQcjkQUMWIcUdaGa?startTime=1726741248000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"地理", 単元名:"アジア州（東南・南・中央・西アジア）", 難易度:"共通", URL:"https://zoom.us/rec/share/XZHXAnF1k-T6-HOwEAu4iKlKIOnLA6DK2li1TOPtcMDayDsTRoEHHjF0oYqTmuOe.IxwXc9UHM71EHg13?startTime=1731147802000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"地理", 単元名:"ヨーロッパ州", 難易度:"共通", URL:"https://zoom.us/rec/share/Jx-QWW9ZtUWKxM4ml9ZBSfPHuZZzeIJIXDWHHNhMXlfcSG2xsHeGkpqli0KvdKED.1fZeh_l69e22Vjhi?startTime=1726914051000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"地理", 単元名:"アフリカ州", 難易度:"共通", URL:"https://zoom.us/rec/share/xuCwKAcUhXLZzoMvCxF5TdBr-_cSdfd2kcDjYD3R_Az9u6coSqHZoYq6gV9rvBpa.s3YoQtQ95r5xyoCQ?startTime=1731406942000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"地理", 単元名:"北アメリカ州", 難易度:"共通", URL:"https://zoom.us/rec/share/dTDqlvMRJA-hclDcIYjBDFIjp6ZgA4b0VgfMqtHycBy19HOsyYtSnquzltSKsjev.AQSUs_0W6WWquR34?startTime=1731752834000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"地理", 単元名:"オセアニア州", 難易度:"共通", URL:"https://zoom.us/rec/share/VeZS3lHSBtWeIyJf_DcJojyRtOcNBglbytgJEiI3h0zvcyVxe9Ycdf6QiF3W0VbB.acPbdUoaNDYgGwCt?startTime=1731579697000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"地理", 単元名:"身近な地域", 難易度:"共通", URL:"https://zoom.us/rec/share/EdwiF-u8ncdYIB9uM1SbJrhV-sZS2E4cv3i6O0hQmfLZgS_LIy9Xw5On6MPcTgCt.WQtUo4Zh-SAZKOcC?startTime=1713959176000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"地理", 単元名:"日本の人口・資源・エネルギーと工業", 難易度:"共通", URL:"https://zoom.us/rec/share/5wQKHmmIAmNVUcY6TIl_8Zea4uF4LW2PdlcyEzJl76fdwpt0Nsq-OrydMu63g1L8.z93OSU5krRGHiXyE?startTime=1731152698000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"地理", 単元名:"日本と世界の結びつき", 難易度:"共通", URL:"https://zoom.us/rec/share/hDUrSMANLYzKq4I9lLjs3AzzCQsE8V5qQieRmUnW7t0ExWDIva7CPxgPdtJKDpU6.6zQaR5XD271n-BDq?startTime=1727351240000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"地理", 単元名:"九州地方", 難易度:"共通", URL:"https://zoom.us/rec/share/m5Hp0B5GcsKzXVMa4MtMbDhEkghmZxRbPRAEwTCtucBis9deOhIJHi1CgzZKX86A.Hq8fIjsFwlV8mE-i?startTime=1726660013000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"地理", 単元名:"中国・四国地方", 難易度:"共通", URL:"https://zoom.us/rec/share/XZHXAnF1k-T6-HOwEAu4iKlKIOnLA6DK2li1TOPtcMDayDsTRoEHHjF0oYqTmuOe.IxwXc9UHM71EHg13?startTime=1731152835000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"地理", 単元名:"近畿地方", 難易度:"共通", URL:"https://zoom.us/rec/share/HPobO4yqrUf0ApfFKbPaGbD4GtQ3jpmt_brd5NClKvLwBHDHbHLlOnZg6_TAyZub.k3RsJlZGKwH9qxjB?startTime=1726746345000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"地理", 単元名:"中部地方", 難易度:"共通", URL:"https://zoom.us/rec/share/IkyNUrSWN8lpqmhuadyS33Im2jIzmvaL1s4ATC6gLIIQ1zVJJrLxVx3jcvwg-OKO.Y6b6XkubFhC5Os7B?startTime=1726746458000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"地理", 単元名:"関東地方", 難易度:"共通", URL:"https://zoom.us/rec/share/xuCwKAcUhXLZzoMvCxF5TdBr-_cSdfd2kcDjYD3R_Az9u6coSqHZoYq6gV9rvBpa.s3YoQtQ95r5xyoCQ?startTime=1731412054000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"地理", 単元名:"東北地方", 難易度:"共通", URL:"https://zoom.us/rec/share/vCr7QKGkt_flPtLwVmzzd_4qif3vJcLQSonlUmhy1WIRj0KGp-QKJmjirK4BD71l.ZENGbJi-deR1YQlt?startTime=1731498477000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"地理", 単元名:"北海道地方", 難易度:"共通", URL:"https://zoom.us/rec/share/s_ad7-twq2lBha3F8zyqJCDKJ0ZQxUKhyrpGsBHh-GsdQoIVkn-kJjo-RGzVzA2n.63ZdvHxBXqpvNcy7?startTime=1714126833000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"歴史", 単元名:"人類の始まりと古代文明", 難易度:"共通", URL:"https://zoom.us/rec/share/2Zq6zfO62Oi83QpTPei5CvxOb1nHiMfB8pzwJNqz2kq7u9RNHmMWofZLGQML-ARM.o3XyFFvw3bDUYeGk?startTime=1715422878000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"歴史", 単元名:"旧石器・縄文・弥生・古墳時代", 難易度:"共通", URL:"https://zoom.us/rec/share/ibh054ZjXTYAisyvuYn_viEBsaBSZvqrlDXscuenzlwIuhOSG_PSr7PYC3kU4vN6.Nj5oUdiqUrbc14an?startTime=1726654942000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"歴史", 単元名:"古墳時代", 難易度:"共通", URL:"https://zoom.us/rec/share/LVQRtd7_DyMQEbyeftT-rV153Jz_Go5geORy7jOr5yAd90Oh4TwjYhmlrXNp_6tn.hCKTLUyfuwGPCP4W?startTime=1739355777000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"歴史", 単元名:"奈良時代", 難易度:"共通", URL:"https://zoom.us/rec/share/byf497y_9dKx3ArnC7DomgQcCCTdYvJK1Rdwm4yCS2Hs4FaCR3MK0BTtVT0fc9tA.3xu1-Ech5y9HWPQk?startTime=1739010322000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"歴史", 単元名:"平安時代", 難易度:"共通", URL:"https://zoom.us/rec/share/_-svGVjkyX0t2BX1KO4yU1oF3pFseQln7Lss5w3l_loZsKb2LvA78zGaj3Y9Ur6s.Bg7HzQXizGtgL9Bq?startTime=1732098153000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"歴史", 単元名:"鎌倉時代", 難易度:"共通", URL:"https://zoom.us/rec/share/wZbNRxiofG9uhRu4y8JC4k80wOCM7cnSEf4MEqA6eg5SN2lcNj51-V6rFerIDWED.5HHXCImLlPD1Ng1Z?startTime=1739010020000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"歴史", 単元名:"室町時代", 難易度:"共通", URL:"https://zoom.us/rec/share/vCr7QKGkt_flPtLwVmzzd_4qif3vJcLQSonlUmhy1WIRj0KGp-QKJmjirK4BD71l.ZENGbJi-deR1YQlt?startTime=1731493350000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"歴史", 単元名:"ヨーロッパ・西アジアの動き", 難易度:"共通", URL:"https://zoom.us/rec/share/DEdIB1JHKRAQYtx83-vFG65RV3pZ99ipMVKGUlcZq7RDwWqziu3pLpHh2Q4T3wCN.ds0tFa5A6utfscQ7?startTime=1768904561000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"歴史", 単元名:"安土桃山時代", 難易度:"共通", URL:"https://zoom.us/rec/share/4fAhGUyGkRrqQFKv9EmXjfKSVCZGjTvrLTG0wz2ktRrP8ne2R8LEe68MSi8LTH8H.LF-oxQatsQEGzjUH?startTime=1762601720000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"歴史", 単元名:"江戸幕府①（幕府の成立・外交）", 難易度:"共通", URL:"https://zoom.us/rec/share/wZbNRxiofG9uhRu4y8JC4k80wOCM7cnSEf4MEqA6eg5SN2lcNj51-V6rFerIDWED.5HHXCImLlPD1Ng1Z?startTime=1739015204000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"歴史", 単元名:"江戸幕府②（産業の発達と文化）", 難易度:"共通", URL:"https://zoom.us/rec/share/DnsoyB-ycrinpm9TadMrCXkW6y33q-Kyr15N4II1fYQiMcgHKEmMZUs3V6CharQG.W8dXqb3PLQlHIHWQ?startTime=1739274527000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"歴史", 単元名:"江戸時代③（学問・文化の発展，幕政改革Ⅱ）", 難易度:"共通", URL:"https://zoom.us/rec/share/sGzerGsDE5Om7iSHR4vEIIWbhybOIGWnuu3nJ8TbTdNOb31T7nVof97Ba5j6u5ui.2BVugfgz7e-rj_3c?startTime=1727178346000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"歴史", 単元名:"ヨーロッパの近代化", 難易度:"共通", URL:"https://zoom.us/rec/share/h7ljvlHj_bJ8VebSvD2qTbGLdPxxylZVFaog1pQzSUmGWC6fgaBMjmXf-NtnEe4i.yHI9vMXPeaWr2dVX?startTime=1739274396000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"歴史", 単元名:"江戸時代④「開国、江戸幕府の滅亡」", 難易度:"共通", URL:"https://zoom.us/rec/share/1hLW1C-n2JQbUugFnx4amlIgSr5jBVr3gPitFS4CF-JVKwCWWHJFb1MFL9JgC1Vr.iE0klaOZqw5bB8jO?startTime=1718192772000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"歴史", 単元名:"明治時代①（明治維新・自由民権運動）", 難易度:"共通", URL:"https://zoom.us/rec/share/9ZVFVpUGoO4Q14pV1UzmxFnYpRr3560_Nc_ZysXjAsGgYbpjKv3MHPlhqYCB20dC.OyhUzmXehpxP8t1v?startTime=1739965606000" },
+    {学年:"中1・中2", 科目:"社会", 分野:"歴史", 単元名:"明治時代②（日清・日露戦争、条約改正）", 難易度:"共通", URL:"https://zoom.us/rec/share/siRR9E30FnzVnxHvYAhzbX4j_IPpImlNr-gQfjeUYDdH6sIA9zG2dPsWzsjJ6Vfb.bbL196d08EScYLWh?startTime=1738756004000" },
+    {学年:"中3", 科目:"社会", 分野:"歴史", 単元名:"日清・日露・条約改正", 難易度:"共通", URL:"https://zoom.us/rec/share/-Gi0qx-QTPzIna_bJ1bU6YdGA-s76g_CeIPn8RqLaokondTffGq3Yx4m9IT7xyoe.eynkUyl6O0XB-_j-?startTime=1718619619000" },
+    {学年:"中3", 科目:"社会", 分野:"歴史", 単元名:"産業の発達と近代文化", 難易度:"共通", URL:"https://zoom.us/rec/share/313IwCOyHKqITNn_MVcRPtDNYho-7DAT0ZBE8jFVVLw2Exf-cthCISW__aan6UKc.KbYhTsHuJLvWCpW8?startTime=1718624808000" },
+    {学年:"中3", 科目:"社会", 分野:"歴史", 単元名:"第一次世界大戦", 難易度:"共通", URL:"https://zoom.us/rec/share/aLIA91EhpBBD3-nnSuD7sBTeDg1lNdd_LfN38ff3zYT9qpftWSrQrcAc4uOoLoA.gWaQxXpXME2wPo6i?startTime=1718365567000" },
+    {学年:"中3", 科目:"社会", 分野:"歴史", 単元名:"大正デモクラシー", 難易度:"共通", URL:"https://zoom.us/rec/share/BRJ0SyLOFIsU4bOhF6D0dsIGv9R1OOvvrmjoTo92KnvEjpyh7WM7KvNjG8NCOgWY.WjP_N4sF4d4nh11S?startTime=1714995929000" },
+    {学年:"中3", 科目:"社会", 分野:"歴史", 単元名:"世界恐慌・日本の中国進出", 難易度:"共通", URL:"https://zoom.us/rec/share/6oM20KV0aLJ8QxBHH_2JesJa3bObUL2eEJ-oyHMY-7ZZH2brAW5jcwvHy2TLvnJ9.DfBxl9vvPxCoPFEk?startTime=1714126806000" },
+    {学年:"中3", 科目:"社会", 分野:"歴史", 単元名:"第二次世界大戦", 難易度:"共通", URL:"https://zoom.us/rec/share/zi-p6xx2_AHEuMkv5hI5T65T-HdGqZJlTGSowMHTzeHs70qWmYYzGtZGDy8WKf2s.qy8Ty_Iw43AkG5jl?startTime=1714131986000" },
+    {学年:"中3", 科目:"社会", 分野:"歴史", 単元名:"日本の民主化・冷戦", 難易度:"共通", URL:"https://zoom.us/rec/share/s_ad7-twq2lBha3F8zyqJCDKJ0ZQxUKhyrpGsBHh-GsdQoIVkn-kJjo-RGzVzA2n.63ZdvHxBXqpvNcy7?startTime=1714132037000" },
+    {学年:"中3", 科目:"社会", 分野:"歴史", 単元名:"平成時代", 難易度:"共通", URL:"https://zoom.us/rec/share/6oM20KV0aLJ8QxBHH_2JesJa3bObUL2eEJ-oyHMY-7ZZH2brAW5jcwvHy2TLvnJ9.DfBxl9vvPxCoPFEk?startTime=1714131916000" },
+    {学年:"中3", 科目:"社会", 分野:"歴史", 単元名:"現代社会と私たちの生活", 難易度:"共通", URL:"https://zoom.us/rec/share/1z2GwAKyP1tIvJ43ShQX8_pq2TkCJywkzUDFQS-RFKsK2C7qaj4rL48UXV-1yCNU.PhKl5L8ZOdLHV4p6?startTime=1728037225000" },
+    {学年:"中3", 科目:"社会", 分野:"公民", 単元名:"日本国憲法と人権", 難易度:"共通", URL:"https://zoom.us/rec/share/m9DEwPZbWX_ZyxYV14Nc3JASgNCCxVVbTvZvxyGNdBhYyD0ljwIPW9D7rZsxcL7n.Lv-3YgMBFmybf-6n?startTime=1728037329000" },
+    {学年:"中3", 科目:"社会", 分野:"公民", 単元名:"基本的人権", 難易度:"共通", URL:"https://zoom.us/rec/share/x16XOrQEgEqUiPdYVcXdABlqEzNIYMVuJUa6IE8IDLYcD8apEfhSgL9ZS3FPWwp1.I8KmjbCBkpGMM6Nu?startTime=1731066360000" },
+    {学年:"中3", 科目:"社会", 分野:"公民", 単元名:"国会と内閣、選挙", 難易度:"共通", URL:"https://zoom.us/rec/share/5sYWPbYoUL6l9eWHDjp9xYSshpe_Ayk6JsvF_ajGC9yHTcElqIX8CGt2eGdf7-D2.Wk0T2yL4OHjHt1Yp?startTime=1731066385000" },
+    {学年:"中3", 科目:"社会", 分野:"公民", 単元名:"裁判所、三権分立", 難易度:"共通", URL:"https://zoom.us/rec/share/aX11V3fpPjNnPBfy7vbm_WzfVayb8VtCKKAwZDr0Tde0q1vQ9J-v1QhQbtG9Xw-0.IV-8FonOw5mHRM8Z?startTime=1731666262000" },
+    {学年:"中3", 科目:"社会", 分野:"公民", 単元名:"地方自治", 難易度:"共通", URL:"https://zoom.us/rec/share/-UHrrBXxQDvpTMexhz2pbqf6CIGnu4J2OvUD1kvRqnQ--VrvkKakgvTdmtZ3C7ez.vE3wtc0xU1hhj3ep?startTime=1731066387000" },
+    {学年:"中3", 科目:"社会", 分野:"公民", 単元名:"消費生活、生産と流通", 難易度:"共通", URL:"https://zoom.us/rec/share/x16XOrQEgEqUiPdYVcXdABlqEzNIYMVuJUa6IE8IDLYcD8apEfhSgL9ZS3FPWwp1.I8KmjbCBkpGMM6Nu?startTime=1731061360000" },
+    {学年:"中3", 科目:"社会", 分野:"公民", 単元名:"市場経済と価格、金融", 難易度:"共通", URL:"https://zoom.us/rec/share/msOEgUN4pRXTEaV5cPjYXd3Y6-e68KQbgb_-79icTd8NU7zPONQnMElHAqAOrVs.RkeF32_U8XJI90Gk?startTime=1731325698000" },
+    {学年:"中3", 科目:"社会", 分野:"公民", 単元名:"財政・国民の福祉と労働", 難易度:"共通", URL:"https://zoom.us/rec/share/DiH8S0lduoYTpYtOEsumSPERRYGssj7jGn66Y1lBK-ixrt9qSyZoyGk0s3o0ERA8.eIHzKjp3HveeNpj7?startTime=1731325643000" },
+    {学年:"中3", 科目:"社会", 分野:"公民", 単元名:"環境・世界経済", 難易度:"共通", URL:"https://zoom.us/rec/share/ipQPdPnsaB1wgn8PhczlKTC4wU4pqRKMTTlXexJY-JdvLPQwSvqrONNBx1fZ7j8-.054M0X2hWvXyV-cY?startTime=1731325531000" },
+    {学年:"中3", 科目:"社会", 分野:"公民", 単元名:"国際社会・国際問題", 難易度:"共通", URL:"https://zoom.us/rec/share/39zfr7hhcVWi5dcDu4xHQ3huZXs-fXUmpIwkHzhZjGL-YXCvtTtndkIS2Iy9UkzU.Ec21Ujmr53Kq0XzK?startTime=1731325620000" },
+    ];
+
+    const filters = { grade: 'all', subject: 'all', field: 'all', level: 'all' };
+    const fieldsBySubject = { all: ["生物", "化学", "物理", "地学", "地理", "歴史", "公民"], 理科: ["生物", "化学", "物理", "地学"], 社会: ["地理", "歴史", "公民"] };
+
+    window.setFilter = (type, value, el) => {
+        filters[type] = value;
+        const parent = el.parentElement;
+        parent.querySelectorAll('.btn').forEach(b => b.classList.remove('active', 'active-accent'));
+        if (type === 'grade') el.classList.add('active');
+        else el.classList.add('active-accent');
+        if (type === 'subject') { filters.field = 'all'; updateFieldButtons(value); }
+        render();
+    };
+
+    function updateFieldButtons(subject) {
+        const container = document.getElementById('fieldContainer');
+        const list = fieldsBySubject[subject];
+        container.innerHTML = '<span class="filter-label">分野:</span><button class="btn active-accent" onclick="setFilter(\'field\',\'all\',this)">すべて分野</button>';
+        list.forEach(f => {
+            const b = document.createElement('button');
+            b.className = 'btn'; b.innerText = f;
+            b.onclick = () => window.setFilter('field', f, b);
+            container.appendChild(b);
+        });
+    }
+
+    window.render = () => {
+        const grid = document.getElementById('videoGrid');
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        grid.innerHTML = '';
+
+        const filtered = allVideos.filter(v => {
+            const gradeList = v.学年.split(/[・,、]/).map(s => s.trim());
+            const matchGrade = (filters.grade === 'all' || gradeList.includes(filters.grade));
+            const matchSubject = (filters.subject === 'all' || v.科目 === filters.subject);
+            // ★ 安全対策として v.分野 の存在チェック (v.分野 && ...) を追加しました
+            const matchField = (filters.field === 'all' || (v.分野 && v.分野.startsWith(filters.field)));
+            let matchLevel = (filters.level === 'all' || (filters.level === '共通' && v.難易度 === '共通') || (filters.level === '標準' && (v.難易度 === '標準' || v.難易度 === '共通')) || (filters.level === '発展' && (v.難易度 === '発展' || v.難易度 === '共通')));
+            return matchGrade && matchSubject && matchField && matchLevel && v.単元名.toLowerCase().includes(query);
+        });
+
+        if (filtered.length === 0) { grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1; color:#999; margin-top:50px;">該当する動画がありません。</p>'; return; }
+
+        filtered.forEach(v => {
+            const a = document.createElement('a');
+            a.className = `card field-${v.分野}`; a.href = v.URL; a.target = '_blank';
+            
+            // ★ 視聴ログ送信ロジック（目安時間をFirestoreへ）
+            a.onclick = () => {
+                const startTime = Date.now();
+                const onFocus = async () => {
+                    const durationSec = Math.round((Date.now() - startTime) / 1000);
+                    if (durationSec > 10) { // 10秒以上の視聴で記録
+                        try {
+                            const idToken = await auth.currentUser.getIdToken(true);
+                            await httpsCallable(functions, 'recordVideoLog')({
+                                token: idToken,
+                                type: "対策授業",
+                                grade: v.学年,
+                                subject: v.科目,
+                                difficulty: v.難易度,
+                                unitName: v.単元名,
+                                durationSec: durationSec
+                            });
+                            console.log("対策授業 ログ保存完了");
+                        } catch(e) { console.error("Log Error:", e); }
+                    }
+                    window.removeEventListener('focus', onFocus);
+                };
+                window.addEventListener('focus', onFocus);
+            };
+
+            a.innerHTML = `
+                <div class="card-body">
+                    <span class="grade-badge">${v.学年}</span>
+                    <span style="font-size:0.7rem;font-weight:bold;color:#666;">${v.科目} | ${v.分野}</span>
+                    <div class="unit-title">${v.単元名}</div>
+                    <span class="level-tag level-${v.難易度}">${v.難易度}</span>
+                </div>
+                <div class="card-footer"><span>視聴を開始する</span><i class="fas fa-play-circle"></i></div>`;
+            grid.appendChild(a);
+        });
+    };
+
+    updateFieldButtons('all');
+    window.render();
+</script>
+</body>
+</html>

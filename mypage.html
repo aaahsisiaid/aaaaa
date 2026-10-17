@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>マイページ</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); font-family: sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; min-height: 100vh; }
+        .container { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; text-align: center; }
+        h1 { color: #333; margin-bottom: 5px; font-size: 24px; }
+        .user-info { color: #666; margin-bottom: 20px; font-size: 14px; font-weight: bold; line-height: 1.6; }
+        .reg-day-display { font-size: 18px; color: #4A90E2; display: block; margin-top: 8px; margin-bottom: 5px; }
+        #courseArea { margin-top: 15px; padding: 20px 15px; border: 3px solid #4A90E2; border-radius: 15px; background: #fff; }
+        .area-title { font-size: 15px; color: #4A90E2; font-weight: bold; margin-bottom: 10px; display: block; line-height: 1.4; }
+        .course-btn { width: 100%; padding: 18px 10px; color: white; border: none; border-radius: 12px; font-size: 17px; font-weight: bold; cursor: pointer; margin-bottom: 12px; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; box-sizing: border-box; }
+
+        .btn-blue { background: #5da0eb; box-shadow: 0 4px 0 #4a86c9; }
+        .btn-green { background: #81c784; box-shadow: 0 4px 0 #66a569; }
+        .btn-orange { background: #ffb74d; box-shadow: 0 4px 0 #e0a143; }
+
+        .transfer-link { display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: 15px; font-size: 15px; color: #fff; background: #00acc1; padding: 14px; border-radius: 12px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 0 #00838f; transition: 0.3s; width: 100%; box-sizing: border-box; }
+        .transfer-link:hover { transform: translateY(2px); box-shadow: 0 2px 0 #00838f; }
+
+        .review-btn { display: none; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; font-size: 15px; color: #fff; background: #9c27b0; padding: 14px; border-radius: 12px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 0 #7b1fa2; transition: 0.3s; width: 100%; box-sizing: border-box; }
+        .review-btn:hover { transform: translateY(2px); box-shadow: 0 2px 0 #7b1fa2; }
+
+        #curriculumArea { margin-top: 20px; background: #fdfdfd; border: 1px solid #eee; border-radius: 12px; padding: 15px; text-align: left; }
+        .curr-title { font-size: 13px; font-weight: bold; color: #666; border-bottom: 1px solid #eee; margin-bottom: 10px; display: block; }
+        .week-block { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed #eee; }
+        .week-label { font-size: 11px; color: #4A90E2; font-weight: bold; margin-bottom: 4px; display: block; }
+        .curr-item { font-size: 12px; margin-bottom: 3px; color: #333; display: flex; gap: 8px; }
+        .curr-sub { color: #888; font-weight: bold; min-width: 40px; }
+        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 25px; }
+        .menu-item { background: #f8f9fa; padding: 15px; border-radius: 12px; text-decoration: none; color: #333; font-weight: bold; border: 1px solid #eee; transition: 0.3s; display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 13px; }
+        .menu-item:hover { background: #e9ecef; transform: translateY(-2px); }
+        .menu-item i { font-size: 20px; color: #4A90E2; }
+        .logout { grid-column: span 2; background: #fff0f0; border-color: #ffcccc; color: #d32f2f; }
+        .vacation-msg { color: #d32f2f; font-size: 14px; font-weight: bold; line-height: 1.6; padding: 15px; border: 2px dashed #ffcccc; border-radius: 12px; background: #fffafa; margin: 10px 0; }
+        .suggest-msg { font-size: 11px; color: #d32f2f; background: #fff0f0; padding: 8px; border-radius: 8px; margin-top: 5px; }
+        .mode-label { font-size: 10px; color: #ff4d4d; margin-bottom: 5px; display: block; font-weight: bold; }
+        .grade-note { font-size: 11px; color: #666; background: #f0f7ff; padding: 8px; border-radius: 8px; margin-top: 5px; display: none; }
+        .unreg-warning { color: #d32f2f; font-size: 12px; font-weight: bold; margin-top: 10px; padding: 10px; border: 1px solid #ffcccc; border-radius: 10px; background: #fffafa; }
+        .link-disabled { opacity: 0.45; filter: grayscale(1); pointer-events: none; cursor: not-allowed; box-shadow: none !important; }
+        .special-msg-box { display: none; text-align: left; margin: 15px 0; padding: 15px; border: 2px solid #ffca28; border-radius: 12px; background: #fffdf5; }
+        .special-msg-text { font-size: 14px; color: #333; font-weight: bold; line-height: 1.6; white-space: pre-wrap; }
+        .special-msg-link { display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; font-size: 15px; color: #fff; background: #ffa726; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 0 #e08e00; width: 100%; box-sizing: border-box; transition: 0.3s; }
+        .special-msg-link:hover { transform: translateY(2px); box-shadow: 0 2px 0 #e08e00; }
+        .announcement-box { text-align: left; margin: 15px 0; padding: 15px; border: 2px solid #ec407a; border-radius: 12px; background: #fff0f6; box-shadow: 0 2px 8px rgba(236,64,122,0.15); }
+        .announcement-box + .announcement-box { margin-top: -5px; }
+        .announcement-text { font-size: 14px; color: #333; font-weight: bold; line-height: 1.6; white-space: pre-wrap; }
+        .announcement-link { display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; font-size: 15px; color: #fff; background: #ec407a; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 0 #c2185b; width: 100%; box-sizing: border-box; transition: 0.3s; }
+        .announcement-link:hover { transform: translateY(2px); box-shadow: 0 2px 0 #c2185b; }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Welcome! to Mypage</h1>
+        <div id="userInfo" class="user-info">読み込み中...</div>
+        <div id="gradeNote" class="grade-note"></div>
+
+        <div id="announcementArea"></div>
+
+        <div id="specialMessageArea" class="special-msg-box">
+            <div id="specialMessageText" class="special-msg-text"></div>
+            <a href="#" id="specialMessageLink" class="special-msg-link" target="_blank" rel="noopener"></a>
+        </div>
+
+        <div id="courseArea">
+            <span class="area-title"><i class="fas fa-video"></i> 本日の授業への参加</span>
+            <div id="courseList">読み込み中...</div>
+        </div>
+
+        <a href="transfer.html" id="transferLink" class="transfer-link"><i class="fas fa-exchange-alt"></i> 振替で参加される方はこちら</a>
+        <a href="#" id="reviewBtn" class="review-btn"><i class="fas fa-book-open"></i> 復習期間（9/21～10/10）</a>
+
+        <div id="curriculumArea">
+            <span class="curr-title"><i class="fas fa-calendar-alt"></i> 学習予定</span>
+            <div id="curriculumList">読み込み中...</div>
+        </div>
+
+        <div class="menu-grid">
+            <a href="recording-menu.html" class="menu-item"><i class="fas fa-play-circle"></i><span>録画をみる</span></a>
+            <a href="courses.html" id="coursesLink" class="menu-item"><i class="fas fa-edit"></i><span>講座・曜日の登録・変更</span></a>
+            <a href="notices.html" class="menu-item"><i class="fas fa-bullhorn"></i><span>お知らせ</span></a>
+            <a href="reset-password.html" id="resetPasswordLink" class="menu-item"><i class="fas fa-key"></i><span>パスワード変更</span></a>
+            <a href="#" id="logoutBtn" class="menu-item logout"><i class="fas fa-sign-out-alt"></i><span>ログアウト</span></a>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAuSr-KgBjfvp-yroLH2X0tujZaUenFVsY",
+            authDomain: "boxwood-spot-486909-j1.firebaseapp.com",
+            projectId: "boxwood-spot-486909-j1",
+            storageBucket: "boxwood-spot-486909-j1.firebasestorage.app",
+            messagingSenderId: "899371812603",
+            appId: "1:899371812603:web:ced1901f7a3abb5e0e125e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const functions = getFunctions(app, "us-central1");
+
+        const safeSetHTML = (id, html) => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = html;
+        };
+
+        // ★最重要改善：授業参加ログの記録時にも、確実に一発で認証を通すため、現在のIDトークンを発行して直接手渡す
+        window.handleAttend = async (cId) => {
+            try {
+                const idToken = await auth.currentUser.getIdToken(true);
+                await httpsCallable(functions, 'recordAttendance')({ token: idToken, courseId: cId });
+            } catch (e) { console.error("出席ログ記録失敗:", e); }
+        };
+
+        // ★一定期間クリック等の操作がない場合、自動的にログアウトさせる
+        // （タブを開きっぱなしにしていると10分おきの自動リロードだけで無操作のままログイン状態が
+        //   何週間も続いてしまい、出席ボタンを押していないのに「ログイン中」に見える問題への対策）
+        const INACTIVITY_LIMIT_MS = 5 * 60 * 60 * 1000; // 5時間
+        const LAST_ACTIVITY_KEY = "lastActivityAt";
+
+        function markActivity() {
+            try { localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now())); } catch (e) {}
+        }
+        ["click", "touchstart", "keydown", "scroll"].forEach(evt => {
+            document.addEventListener(evt, markActivity, { passive: true });
+        });
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                let lastActivity = null;
+                try { lastActivity = Number(localStorage.getItem(LAST_ACTIVITY_KEY)) || null; } catch (e) {}
+
+                if (lastActivity && (Date.now() - lastActivity > INACTIVITY_LIMIT_MS)) {
+                    localStorage.clear();
+                    try { await signOut(auth); } catch (e) { console.error("SignOut Error:", e); }
+                    window.location.href = "index.html";
+                    return;
+                }
+
+                if (!lastActivity) markActivity(); // 初回ログイン直後はアクティビティを記録（以降はクリック等の実操作のみで更新）
+                await loadMyPage(user);
+            } else {
+                window.location.href = "index.html";
+            }
+        });
+
+        // ★指定した会員番号でログイン中は、振替リンク・講座変更・パスワード変更をグレーアウトして無効化する
+        const restrictedMemberIds = ["12907890", "13007890"];
+
+        function applyMemberLinkRestrictions(memberId) {
+            if (!restrictedMemberIds.includes(memberId)) return;
+            ["transferLink", "coursesLink", "resetPasswordLink"].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.classList.add("link-disabled");
+                el.removeAttribute("href");
+                el.setAttribute("aria-disabled", "true");
+                el.tabIndex = -1;
+                el.addEventListener("click", e => e.preventDefault());
+            });
+        }
+
+        // ★管理画面（admin-users.html）で生徒ごとに設定した特別メッセージ・リンクボタンを表示する
+        function renderSpecialMessage(specialMessage) {
+            const area = document.getElementById("specialMessageArea");
+            const textEl = document.getElementById("specialMessageText");
+            const linkEl = document.getElementById("specialMessageLink");
+            if (!area || !textEl || !linkEl) return;
+
+            if (!specialMessage || !specialMessage.enabled || !specialMessage.text) {
+                area.style.display = "none";
+                return;
+            }
+
+            textEl.textContent = specialMessage.text;
+
+            const url = (specialMessage.linkUrl || "").trim();
+            const isSafeUrl = /^https?:\/\//i.test(url);
+            if (isSafeUrl && specialMessage.linkText) {
+                linkEl.textContent = specialMessage.linkText;
+                linkEl.href = url;
+                linkEl.style.display = "inline-flex";
+            } else {
+                linkEl.style.display = "none";
+            }
+
+            area.style.display = "block";
+        }
+
+        // ★管理画面（admin-announcements.html）で学年・教室を指定して配信するアナウンスを取得・表示する
+        // specialMessageとは別枠で、複数件同時に表示されうる（specialMessageの上に並べる）
+        async function renderAnnouncements(grade, classroom, currentYMD) {
+            const area = document.getElementById("announcementArea");
+            if (!area) return;
+            area.innerHTML = "";
+
+            const toYMD = (dateStr) => dateStr ? parseInt(dateStr.replace(/-/g, ""), 10) : null;
+
+            try {
+                const snap = await getDocs(query(collection(db, "announcements"), where("enabled", "==", true)));
+                const matched = snap.docs
+                    .map(d => d.data())
+                    .filter(a => {
+                        const gradeOk = !a.targetGrades || a.targetGrades.length === 0 || a.targetGrades.includes(grade);
+                        const classroomOk = !a.targetClassrooms || a.targetClassrooms.length === 0 || a.targetClassrooms.includes(classroom);
+                        const startYMD = toYMD(a.startDate);
+                        const endYMD = toYMD(a.endDate);
+                        const periodOk = (!startYMD || currentYMD >= startYMD) && (!endYMD || currentYMD <= endYMD);
+                        return gradeOk && classroomOk && periodOk && a.text;
+                    });
+
+                area.innerHTML = matched.map(a => {
+                    const url = (a.linkUrl || "").trim();
+                    const isSafeUrl = /^https?:\/\//i.test(url);
+                    const linkHtml = (isSafeUrl && a.linkText)
+                        ? `<a href="${escapeHtmlText(url)}" class="announcement-link" target="_blank" rel="noopener">${escapeHtmlText(a.linkText)}</a>`
+                        : "";
+                    return `<div class="announcement-box"><div class="announcement-text">${escapeHtmlText(a.text)}</div>${linkHtml}</div>`;
+                }).join("");
+            } catch (e) {
+                console.error("アナウンス取得失敗:", e);
+            }
+        }
+
+        function escapeHtmlText(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+        }
+
+        async function loadMyPage(user) {
+            const memberId = user.email.split('@')[0];
+            applyMemberLinkRestrictions(memberId);
+
+            try {
+                const userDoc = await getDoc(doc(db, "users", memberId));
+                if (!userDoc.exists()) {
+                    safeSetHTML("courseList", "ユーザーデータが見つかりません。");
+                    return;
+                }
+                
+                const userData = userDoc.data();
+                const { grade, currentDay: regDay, cNo: classroomCd, name: userName } = userData;
+
+                const jstNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+                const todayLabel = ["日", "月", "火", "水", "木", "金", "土"][jstNow.getDay()];
+                const timeVal = jstNow.getHours() * 100 + jstNow.getMinutes();
+                const currentYMD = (jstNow.getFullYear() * 10000) + ((jstNow.getMonth() + 1) * 100) + jstNow.getDate();
+
+                const switchDate = new Date("2026-04-12T00:00:00");
+                const isNextTermStart = jstNow >= switchDate;
+                const isTestMode = false;
+
+                const cList = ["161", "162", "112", "170", "171", "172", "173", "174", "176", "177", "178", "119", "140", "150", "164", "113", "115", "120", "129", "130", "144", "146"];
+
+                const nextReg = userData.nextRegistration || [];
+                const period2Reg = userData.period2Registration || [];
+                const period3Reg = userData.period3Registration || [];
+                const period4Reg = userData.period4Registration || [];
+
+                const isPeriod4Start_J3 = currentYMD >= 20261101; // 中3の第Ⅳ期開始
+                const isPeriod4Start_All = currentYMD >= 20261130; // 全学年の第Ⅳ期開始
+                const isJ3 = grade && typeof grade === "string" && grade.includes("中3");
+                
+                let activeReg = period3Reg;
+                if (isPeriod4Start_All) {
+                    // 11/30以降は全学年が第Ⅳ期
+                    activeReg = period4Reg;
+                } else if (isPeriod4Start_J3 && isJ3) {
+                    // 11/1〜11/29の間は中3のみ第Ⅳ期
+                    activeReg = period4Reg;
+                }
+
+                // 【全学年一律化】第Ⅱ期は終了したため、全学年・全期間で第Ⅲ期のみを有効化
+                const usePeriod3Only = true;
+
+                // 登録データから曜日を抽出
+                const targetRegForDays = activeReg;
+                const allNextDays = [...new Set(targetRegForDays.map(r => r.day))].filter(d => d);
+                const dayDisplayText = allNextDays.length > 0 ? `${allNextDays.join('・')}曜日` : '<span style="color:#ff4d4d">未登録</span>';
+
+                let suggestHtml = '';
+                if (regDay && regDay !== todayLabel && regDay !== "全員") {
+                    suggestHtml = `<div class="suggest-msg">正しく参加ボタンが表示されない場合や、本日振替で受講する場合は、「振替で参加される方はこちら」よりご参加ください。</div>`;
+                }
+                const warningHtml = allNextDays.length === 0 ? `<div class="unreg-warning"><i class="fas fa-exclamation-triangle"></i> 講座が登録されていません。講座・曜日の登録・変更より登録してください。登録しても参加ボタンが表示されない場合は、振替ボタンからご参加ください。</div>` : '';
+
+                // 1. ユーザー情報を表示
+                safeSetHTML("userInfo", `
+                    <div>${grade || ""} / ${userName || ""} 様</div>
+                    <div class="reg-day-display">現在の登録：<b>${dayDisplayText}</b></div>
+                    ${suggestHtml}
+                    ${warningHtml}
+                `);
+
+                // 1-1. 学年・教室・公開期間を対象に配信するアナウンス（specialMessageより上に表示）
+                renderAnnouncements(grade, userData.classroom, currentYMD);
+
+                // 1-2. 指定した生徒だけに表示する特別メッセージ（管理画面で生徒ごとに設定）
+                renderSpecialMessage(userData.specialMessage);
+
+                const courseListEl = document.getElementById("courseList");
+                const transferLink = document.querySelector(".transfer-link");
+                const reviewBtn = document.getElementById("reviewBtn");
+
+                // 2. 復習ボタンの判定と表示処理（復習期間：9/21～10/10・11/16～11/28。第1期は1週間前の9/14からボタンを先出し表示）
+                const isReviewPeriod2 = (currentYMD >= 20261116 && currentYMD <= 20261128);
+                const isReviewMode = (currentYMD >= 20260914 && currentYMD <= 20261010) || isReviewPeriod2 || isTestMode;
+                if (reviewBtn) {
+                    reviewBtn.style.display = isReviewMode ? "flex" : "none";
+                    const reviewLabel = (currentYMD <= 20261010) ? "9/21～10/10" : "11/16～11/28";
+                    reviewBtn.innerHTML = `<i class="fas fa-book-open"></i> 復習期間（${reviewLabel}）`;
+
+                    if (grade && typeof grade === "string") {
+                        if (grade.includes("中1")) { reviewBtn.href = "j1.html"; }
+                        else if (grade.includes("中2")) { reviewBtn.href = "j2.html"; }
+                        else if (grade.includes("中3")) { reviewBtn.href = "j3.html"; }
+                    }
+                }
+
+                // 2-2. 振替リンク：復習期間中は、学年別の復習期間ページへ振り替える
+                const isTransferToReview = (currentYMD >= 20260921 && currentYMD <= 20261010) || isReviewPeriod2 || isTestMode;
+                if (transferLink) {
+                    if (isTransferToReview && grade && typeof grade === "string") {
+                        if (grade.includes("中1")) { transferLink.href = "j1.html"; }
+                        else if (grade.includes("中2")) { transferLink.href = "j2.html"; }
+                        else if (grade.includes("中3")) { transferLink.href = "j3.html"; }
+                        else { transferLink.href = "transfer.html"; }
+                    } else {
+                        transferLink.href = "transfer.html";
+                    }
+                }
+
+                // 3. 本日の授業参加ボタンエリアの処理
+                if (currentYMD >= 20260901 && currentYMD <= 20260905) {
+                    if (courseListEl) courseListEl.innerHTML = `<div class="vacation-msg">9/1(月)～9/5(土)は理社講座はお休みです。<br>9/7(月)から第Ⅲ期が開始です。</div>`;
+                    if (transferLink) transferLink.style.display = "inline-flex";
+                } else {
+                    if (transferLink) transferLink.style.display = "inline-flex";
+                    const isLessonTime = isTestMode || (timeVal >= 1850 && timeVal <= 2200);
+                    
+                    if (!isLessonTime) {
+                        if (courseListEl) courseListEl.innerHTML = `<p id="waitMessage" style="color:#d32f2f; font-size:14px; font-weight:bold;">18:50以降にボタンは表示されます。<BR>表示されない場合は、<BR>登録状況の確認・画面の再読み込み<BR>をお試しください。<BR>登録しても表示されない場合は、振替ボタンよりご参加ください。</p>`;
+                    } else {
+                        const iDoc = await getDoc(doc(db, "masters", "course_info"));
+                        const courseMaster = iDoc.data() || {};
+                        const buttonList = [];
+
+                        const collect = (cId, isNext) => {
+                            if (!cId) return;
+                            const cleanId = cId.trim();
+                            const candidates = [
+                                `${cleanId}_${grade}_${todayLabel}`,
+                                `${grade}${cleanId}_${grade}_${todayLabel}`,
+                                cleanId,
+                                `${grade}${cleanId}`
+                            ];
+                            let info = null;
+                            for (const cand of candidates) {
+                                if (courseMaster[cand]) { info = courseMaster[cand]; info.foundId = cand; break; }
+                            }
+                            if (info?.url) {
+                                const timeMatch = info.name.match(/(\d{1,2}:\d{2})/);
+                                const startTime = timeMatch ? timeMatch[0] : "99:99";
+                                let cls = info.type === "理科" ? "btn-green" : info.type === "社会" ? "btn-orange" : "btn-blue";
+                                buttonList.push({ cId: info.foundId || cleanId, name: info.name, url: info.url, cls: cls, time: startTime, isNext: isNext });
+                            }
+                        };
+
+                        if ((!isNextTermStart || isTestMode) && (regDay === todayLabel || regDay === "全員")) {
+                            const mDoc = await getDoc(doc(db, "masters", "class_mapping"));
+                            const targets = mDoc.data()?.[classroomCd]?.[`${grade}${regDay}`];
+                            if (targets) targets.split(",").forEach(cId => collect(cId, false));
+                        }
+                        
+                        // 第Ⅰ期（nextReg）のボタン生成：usePeriod3Only が true のためテストモードを除きスキップ（第Ⅲ期のみに絞り込み）
+                        if (isNextTermStart || isTestMode) {
+                            if (!usePeriod3Only || isTestMode) {
+                                nextReg.forEach(reg => {
+                                    if (reg.day === todayLabel) {
+                                        if (reg.courseName === "公民" && grade && grade.includes("中3")) {
+                                            const hSet = cList.includes(classroomCd) ? ["公民①", "公民③"] : ["公民②", "公民④"];
+                                            hSet.forEach(id => collect(id, true));
+                                        } else {
+                                            collect(reg.courseName, true);
+                                        }
+                                    }
+                                });
+                            }
+                        }
+
+                        const isPeriod3Start = currentYMD >= 20260901;
+                        if (isPeriod3Start || isTestMode) {
+                            activeReg.forEach(reg => {
+                                if (reg.day === todayLabel) {
+                                    collect(reg.courseName, true);
+                                }
+                            });
+                        }
+
+                        const seenIds = new Set();
+                        const uniqueButtons = buttonList.filter(b => seenIds.has(b.cId) ? false : seenIds.add(b.cId));
+                        uniqueButtons.sort((a, b) => a.time.localeCompare(b.time));
+
+                        let btnHtml = isTestMode ? `<span class="mode-label">【テスト中】全表示モード</span>` : "";
+                        uniqueButtons.forEach(b => {
+                            const icon = b.isNext ? '<i class="fas fa-video"></i> ' : '';
+                            btnHtml += `<a href="${b.url}" target="_blank" onclick="handleAttend('${b.cId}')" class="course-btn ${b.cls}">${icon}${b.name}</a>`;
+                        });
+                        const emptyMsg = isTransferToReview
+                            ? "本日は復習期間です。復習期間のボタンより参加する授業を選択して参加してください。"
+                            : "本日の予定がありません。講座の登録状況を確認してください。";
+                        if (courseListEl) courseListEl.innerHTML = btnHtml || emptyMsg;
+                    }
+                }
+
+                // 4. カリキュラム並列処理
+                let currHtml = "";
+                if (grade) {
+                    try {
+                        const baseGrade = grade.match(/中[1-3]/) ? grade.match(/中[1-3]/)[0] : grade;
+                        
+                        const startWeek = 1; 
+                        const endWeek = 41;   
+
+                        const promises = [];
+                        for (let w = startWeek; w <= endWeek; w++) {
+                            promises.push(getDoc(doc(db, "curriculums", `${baseGrade}_共通_第${w}週`)));
+                        }
+
+                        const docs = await Promise.all(promises);
+
+                        docs.forEach((cDoc, index) => {
+                            const w = index + startWeek; 
+                            if (cDoc.exists()) {
+                                const d = cDoc.data();
+                                const start = Number(d.displayStart);
+                                const end = Number(d.displayEnd);
+                                
+                                if (currentYMD >= start && currentYMD <= end) {
+                                    let items = "";
+                                    for (let i = 1; i <= 16; i++) {
+                                        if (d[`sub${i}`] && d[`sub${i}`] !== "-") {
+                                            items += `<div class="curr-item"><span class="curr-sub">${d[`sub${i}`]}</span><span>${d[`unit${i}`] || ""}</span></div>`;
+                                        }
+                                    }
+                                    if (items) {
+                                        currHtml += `<div class="week-block">
+                                            <span class="week-label">${d.weekTitle || `第${w}週`} (${d.date || ''})</span>
+                                            ${items}
+                                        </div>`;
+                                    }
+                                }
+                            }
+                        });
+                    } catch (err) { console.error("並列カリキュラム読み込み失敗:", err); }
+                }
+                safeSetHTML("curriculumList", currHtml || "現在、予定されている学習はありません。");
+
+            } catch (e) { 
+                console.error("マイページ読み込みエラー:", e); 
+                safeSetHTML("courseList", "データの読み込みに失敗しました。電波の良い環境で再試行してください。");
+            }
+        }
+
+        document.getElementById("logoutBtn").addEventListener("click", async (e) => {
+            e.preventDefault();
+            localStorage.clear();
+            try {
+                await signOut(auth);
+            } catch (err) {
+                console.error("SignOut Error:", err);
+            }
+            window.location.href = "index.html";
+        });
+
+        setInterval(() => {
+            const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+            const currentTimeValue = now.getHours() * 100 + now.getMinutes();
+            const waitMsg = document.getElementById("waitMessage");
+            if (waitMsg && currentTimeValue >= 1850 && currentTimeValue <= 2200) { window.location.reload(); }
+        }, 30000);
+
+        setInterval(() => { window.location.reload(); }, 600000);
+    </script>
+</body>
+</html>

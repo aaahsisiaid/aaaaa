@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>パスワードリセット申請</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); font-family: sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        h1 { color: #333; font-size: 20px; margin-bottom: 20px; }
+        p { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.6; text-align: left; }
+        
+        .input-group { text-align: left; margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 12px; font-weight: bold; color: #4A90E2; margin-bottom: 5px; margin-left: 5px; }
+        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 16px; outline: none; transition: 0.3s; }
+        input:focus { border-color: #4A90E2; box-shadow: 0 0 5px rgba(74,144,226,0.2); }
+        
+        .btn { width: 100%; padding: 15px; background: #4A90E2; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .btn:hover { background: #357ABD; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        
+        .back-link { display: block; margin-top: 25px; color: #4A90E2; text-decoration: none; font-size: 14px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-key"></i> リセット申請</h1>
+        <p>パスワードを忘れた方は、以下の情報を入力して申請してください。確認後、順次パスワードを初期化いたします。</p>
+        <p>・職員が会員番号・所属教室・氏名を確認し、手作業でリセット処理を行っております。</p>
+        <p>・申請から初期化まで少しお時間を頂戴する場合があります。ご了承ください。</p>
+        <p>18:30までに申請いただいたものは、19:00までに反映いたします。</p>
+        <p>（パスワード初期化対応時間：15:00～21:30）</p>
+        
+        <p>「オンライン理社講座のご案内」書面に記載されている「初期パスワード」に再設定いたします。</p>
+        <p>設定後のご連絡はございません。お時間をおいて再度お試しください。</p>
+
+        <div class="input-group">
+            <label>会員番号</label>
+            <input type="text" id="memberId" placeholder="12345678" inputmode="numeric">
+        </div>
+
+        <div class="input-group">
+            <label>所属教室</label>
+            <input type="text" id="classroom" placeholder="〇〇校">
+        </div>
+
+        <div class="input-group">
+            <label>氏名</label>
+            <input type="text" id="studentName" placeholder="創造 太郎">
+        </div>
+        
+        <button class="btn" id="submitBtn">申請を送信する</button>
+        
+        <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> ログイン画面へ戻る</a>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAuSr-KgBjfvp-yroLH2X0tujZaUenFVsY",
+            authDomain: "boxwood-spot-486909-j1.firebaseapp.com",
+            projectId: "boxwood-spot-486909-j1",
+            storageBucket: "boxwood-spot-486909-j1.firebasestorage.app",
+            messagingSenderId: "899371812603",
+            appId: "1:899371812603:web:ced1901f7a3abb5e0e125e"
+        };;
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const submitBtn = document.getElementById('submitBtn');
+        
+        submitBtn.onclick = async () => {
+            const memberId = document.getElementById('memberId').value.trim();
+            const classroom = document.getElementById('classroom').value.trim();
+            const studentName = document.getElementById('studentName').value.trim();
+            
+            if (!memberId || !classroom || !studentName) {
+                alert("すべての項目を入力してください。");
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerText = "送信中...";
+
+            try {
+                // index.jsの同期プログラムに渡すためのデータをFirestoreへ保存
+                await addDoc(collection(db, "reset_requests"), {
+                    memberId: memberId,
+                    classroom: classroom,
+                    name: studentName,
+                    timestamp: serverTimestamp(),
+                    status: "waiting" // index.js側でスプレッドシートへ転記するトリガー
+                });
+
+                alert("申請を送信しました。管理者が確認するまでしばらくお待ちください。");
+                window.location.href = "index.html";
+
+            } catch (e) {
+                console.error("Submission Error:", e);
+                alert("送信に失敗しました。ネットワーク状態を確認して再度お試しください。");
+                submitBtn.disabled = false;
+                submitBtn.innerText = "申請を送信する";
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>お知らせ・連絡事項</title>
+    <style>
+        body { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); font-family: 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; min-height: 100vh; }
+        .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 600px; text-align: center; }
+        .back-link { display: block; text-align: left; color: #4A90E2; text-decoration: none; font-size: 14px; margin-bottom: 20px; font-weight: bold; }
+        h2 { color: #333; margin-bottom: 25px; }
+        .notice-list { text-align: left; }
+        .notice-card { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 15px; margin-bottom: 15px; transition: 0.3s; }
+        .notice-card.important { border: 2px solid #ff4d4d; background: #fff5f5; }
+        .notice-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .notice-date { font-size: 12px; color: #999; }
+        .important-badge { background: #ff4d4d; color: white; font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+        .notice-title { font-weight: bold; font-size: 16px; color: #333; margin-bottom: 10px; }
+        .notice-content { font-size: 14px; color: #666; line-height: 1.6; white-space: pre-wrap; margin-bottom: 10px; }
+        .notice-content a { color: #4A90E2; text-decoration: underline; font-weight: bold; }
+        .notice-image { 
+            width: 100%; 
+            max-height: 450px; 
+            object-fit: contain; 
+            border-radius: 8px; 
+            background: #f9f9f9; 
+            margin-top: 10px; 
+            border: 1px solid #eee; 
+            cursor: pointer; 
+            transition: opacity 0.2s;
+        }
+        .notice-image:hover { opacity: 0.8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="mypage.html" class="back-link">← ホームへ戻る</a>
+        <h2>📢 お知らせ・連絡事項</h2>
+        <div id="noticeList" class="notice-list"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app-check.js";
+        // ★修正点：セキュアな判定に必要なモジュールを追記
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAuSr-KgBjfvp-yroLH2X0tujZaUenFVsY",
+            authDomain: "boxwood-spot-486909-j1.firebaseapp.com",
+            projectId: "boxwood-spot-486909-j1",
+            storageBucket: "boxwood-spot-486909-j1.firebasestorage.app",
+            messagingSenderId: "899371812603",
+            appId: "1:899371812603:web:ced1901f7a3abb5e0e125e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const appCheck = initializeAppCheck(app, {
+            provider: new ReCaptchaEnterpriseProvider('6Ldy9dIqAAAAAK_r87VlI-kF2F6jS6M5Fp7H-mP8'),
+            isTokenAutoRefreshEnabled: true
+        });
+
+        // ★修正点：ログイン中のセッションから直接、安全に学年(grade)を特定
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const memberId = user.email.split('@')[0];
+                let memberGrade = "";
+                try {
+                    const userDoc = await getDoc(doc(db, "users", memberId));
+                    if (userDoc.exists()) {
+                        memberGrade = userDoc.data().grade || "";
+                    }
+                } catch (e) {
+                    console.error("学年取得失敗:", e);
+                }
+
+                let allNotices = [];
+                try {
+                    const snap = await getDocs(query(collection(db, "notices"), orderBy("date", "desc")));
+                    allNotices = snap.docs.map(d => d.data());
+                } catch (e) {
+                    console.error("お知らせ取得失敗:", e);
+                }
+
+                loadNotices(memberGrade, allNotices);
+            } else {
+                window.location.href = "index.html";
+            }
+        });
+
+        // 管理者が入力した文字列をそのままinnerHTMLに差し込むとXSSになるためエスケープする
+        function escapeHtml(str) {
+            return String(str ?? "").replace(/[&<>"']/g, (c) => ({
+                "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+            }[c]));
+        }
+
+        // http(s)以外（javascript: など）のURLを弾く
+        function safeUrl(url) {
+            return /^https?:\/\//i.test(url || "") ? url : "";
+        }
+
+        // お知らせ本文：既存データには管理者が手入力した <a href="https://...">文言</a> が
+        // 含まれるため全エスケープはせず、http(s)リンクの<a>タグだけを安全な形に限定して許可し、
+        // それ以外の文字（<script>やonerror=などの属性含む）は全てエスケープする
+        function renderNoticeContent(raw) {
+            const str = String(raw ?? "");
+            const linkPattern = /<a\s+href="(https?:\/\/[^"<>]*)"[^>]*>([^<]*)<\/a>/gi;
+            let result = "";
+            let lastIndex = 0;
+            let m;
+            while ((m = linkPattern.exec(str)) !== null) {
+                result += escapeHtml(str.slice(lastIndex, m.index));
+                result += `<a href="${escapeHtml(m[1])}" target="_blank" rel="noopener noreferrer">${escapeHtml(m[2])}</a>`;
+                lastIndex = linkPattern.lastIndex;
+            }
+            result += escapeHtml(str.slice(lastIndex));
+            return result;
+        }
+
+        function loadNotices(memberGrade, allNotices) {
+            const listContainer = document.getElementById("noticeList");
+
+            const myNotices = allNotices.filter(n =>
+                n.grade === "全員" || (memberGrade && n.grade.includes(memberGrade))
+            );
+
+            if (myNotices.length === 0) {
+                listContainer.innerHTML = "<p style='color:#999; text-align:center;'>現在お知らせはありません。</p>";
+                return;
+            }
+
+            listContainer.innerHTML = myNotices.map(n => {
+                const imageUrl = safeUrl(n.imageUrl);
+                return `
+                <div class="notice-card ${n.importance === '高' ? 'important' : ''}">
+                    <div class="notice-header">
+                        <span class="notice-date">${escapeHtml(n.date)}</span>
+                        ${n.importance === '高' ? '<span class="important-badge">最重要</span>' : ''}
+                    </div>
+                    <div class="notice-title">${escapeHtml(n.title)}</div>
+                    <div class="notice-content">${renderNoticeContent(n.content)}</div>
+
+                    ${imageUrl ? `
+                        <a href="${escapeHtml(imageUrl)}" target="_blank" title="クリックで拡大表示">
+                            <img src="${escapeHtml(imageUrl)}" class="notice-image" alt="お知らせ画像">
+                        </a>
+                    ` : ''}
+                </div>
+            `;
+            }).join("");
+        }
+    </script>
+</body>
+</html>
