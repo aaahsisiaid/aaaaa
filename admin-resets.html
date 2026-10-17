@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>パスワードリセット申請 - 管理者ページ</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #2c3e50 0%, #4a5f7a 100%); font-family: sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; min-height: 100vh; box-sizing: border-box; }
+        .container { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 620px; }
+        .back-link { position: sticky; top: 0; z-index: 20; display: block; background: white; margin: -25px -25px 15px; padding: 14px 25px; color: #34495e; text-decoration: none; font-size: 14px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.06); border-radius: 20px 20px 0 0; }
+        h2 { color: #333; margin: 0 0 8px; font-size: 20px; }
+        .hint { font-size: 12px; color: #888; margin-bottom: 15px; }
+        .status-msg { color: #888; font-size: 13px; margin-bottom: 10px; }
+
+        .req-card { border: 1px solid #eee; border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+        .req-card.resolved { opacity: 0.5; }
+        .req-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .req-name { font-weight: bold; color: #333; font-size: 15px; }
+        .req-date { font-size: 11px; color: #999; }
+        .req-sub { font-size: 12px; color: #666; margin-bottom: 10px; }
+        .req-status { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: bold; }
+        .status-waiting { background: #fff3cd; color: #856404; }
+        .status-synced { background: #d6eaf8; color: #21618c; }
+        .status-resolved { background: #d4edda; color: #155724; }
+        .auto-badge { display: inline-block; background: #e8f5e9; color: #2e7d32; font-size: 10px; font-weight: bold; padding: 2px 7px; border-radius: 10px; margin-left: 6px; }
+
+        .pw-row { display: flex; gap: 6px; }
+        .pw-row input { flex: 1; padding: 9px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; box-sizing: border-box; }
+        .pw-row button { padding: 9px 14px; border: none; border-radius: 8px; background: #4A90E2; color: white; font-weight: bold; cursor: pointer; font-size: 12px; white-space: nowrap; }
+        .pw-row button:disabled { background: #ccc; }
+
+        .mismatch-warning { background: #fff0f0; border: 1px solid #ffb3b3; color: #c0392b; font-size: 12px; font-weight: bold; padding: 8px 10px; border-radius: 8px; margin-bottom: 10px; line-height: 1.6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="admin.html" class="back-link">← 管理者メニューへ戻る</a>
+        <h2><i class="fas fa-key"></i> パスワードリセット申請</h2>
+        <p class="hint">名簿と一致し、初期パスワードが確認できた申請は自動で処理されます。不一致の警告が出ているものは、内容を確認したうえで手動で設定してください。</p>
+
+        <div id="statusMsg" class="status-msg">読み込み中...</div>
+        <div id="reqList"></div>
+    </div>
+
+    <script type="module">
+        import { requireAdmin, callAdmin } from "./admin-common.js";
+
+        requireAdmin(() => {
+            loadRequests();
+        });
+
+        let autoRunning = false;
+
+        async function loadRequests() {
+            const statusMsg = document.getElementById("statusMsg");
+            statusMsg.textContent = "読み込み中...";
+            try {
+                const res = await callAdmin("adminListResetRequests");
+                if (!res.success) {
+                    statusMsg.textContent = "エラー: " + res.message;
+                    return;
+                }
+                statusMsg.textContent = `${res.requests.length}件`;
+                renderList(res.requests);
+                autoProcessSafeRequests(res.requests);
+            } catch (e) {
+                statusMsg.textContent = "読み込み失敗: " + e.message;
+            }
+        }
+
+        // 名簿と一致し、初期パスワードが確認できた申請を自動で処理する。
+        // 一致しないもの・パスワードが見つからないものは、これまで通り手動対応に回す。
+        async function autoProcessSafeRequests(requests) {
+            if (autoRunning) return;
+            const pending = requests.filter(r => r.status !== "resolved" && r.memberId);
+            if (pending.length === 0) return;
+
+            autoRunning = true;
+            const statusMsg = document.getElementById("statusMsg");
+
+            try {
+                const res = await callAdmin("adminLookupMemberPasswords", { memberIds: pending.map(r => r.memberId) });
+                const passwords = res.success ? res.passwords : {};
+
+                const safeOnes = pending.filter(r => getMismatchProblems(r).length === 0 && passwords[r.memberId]);
+                const manualOnes = pending.filter(r => !(getMismatchProblems(r).length === 0 && passwords[r.memberId]));
+
+                // 手動対応が必要なものは、パスワードが取得できていれば入力欄に自動入力するだけに留める
+                manualOnes.forEach(r => {
+                    const pw = passwords[r.memberId];
+                    if (!pw) return;
+                    const card = document.querySelector(`.req-card[data-id="${r.id}"]`);
+                    const pwInput = card && card.querySelector(".pw-input");
+                    if (pwInput && !pwInput.value) {
+                        pwInput.value = pw;
+                        pwInput.title = "名簿（MemberMaster）のパスワード欄から自動入力";
+                    }
+                });
+
+                if (safeOnes.length === 0) return;
+
+                statusMsg.textContent = `${requests.length}件（うち${safeOnes.length}件を自動処理中...）`;
+                for (const r of safeOnes) {
+                    try {
+                        await callAdmin("adminResolveResetRequest", {
+                            requestId: r.id, memberId: r.memberId, newPassword: passwords[r.memberId], auto: true
+                        });
+                    } catch (e) {
+                        console.error("自動処理に失敗:", r.memberId, e);
+                    }
+                }
+                loadRequests(); // 最新状態を反映
+            } catch (e) {
+                console.error("自動処理の準備に失敗:", e);
+            } finally {
+                autoRunning = false;
+            }
+        }
+
+        function renderList(requests) {
+            const listEl = document.getElementById("reqList");
+            if (requests.length === 0) {
+                listEl.innerHTML = `<p style="color:#999; font-size:13px;">申請はありません。</p>`;
+                return;
+            }
+
+            const statusLabel = { waiting: "未処理", synced: "未処理", resolved: "処理済み" };
+            const statusClass = { waiting: "status-waiting", synced: "status-synced", resolved: "status-resolved" };
+
+            listEl.innerHTML = requests.map(r => `
+                <div class="req-card ${r.status === 'resolved' ? 'resolved' : ''}" data-id="${r.id}" data-member-id="${escapeHtml(r.memberId || '')}">
+                    <div class="req-top">
+                        <span class="req-name">${escapeHtml(r.name || "")}</span>
+                        <span class="req-status ${statusClass[r.status] || ''}">${statusLabel[r.status] || r.status}${r.resolvedVia === 'auto' ? '<span class="auto-badge">自動処理</span>' : ''}</span>
+                    </div>
+                    <div class="req-sub">
+                        会員番号: ${escapeHtml(r.memberId || "")} / 教室: ${escapeHtml(r.classroom || "")}
+                        <span class="req-date"> ・ ${r.timestamp ? new Date(r.timestamp).toLocaleString("ja-JP") : ""}</span>
+                    </div>
+                    ${buildMismatchWarning(r)}
+                    ${r.status === 'resolved' ? '' : `
+                        <div class="pw-row">
+                            <input type="text" class="pw-input" placeholder="新しいパスワード（6文字以上）">
+                            <button class="apply-btn">設定して処理済みにする</button>
+                        </div>
+                    `}
+                </div>
+            `).join("");
+
+            listEl.querySelectorAll(".req-card").forEach(card => {
+                const btn = card.querySelector(".apply-btn");
+                if (!btn) return;
+                btn.addEventListener("click", () => resolveRequest(card));
+            });
+        }
+
+        async function resolveRequest(card) {
+            const id = card.dataset.id;
+            const memberId = card.dataset.memberId;
+            const pwInput = card.querySelector(".pw-input");
+            const btn = card.querySelector(".apply-btn");
+            const newPassword = pwInput.value.trim();
+
+            if (newPassword.length < 6) return alert("パスワードは6文字以上で入力してください。");
+            if (!confirm(`会員番号 ${memberId} のパスワードを再設定し、申請を処理済みにします。よろしいですか？`)) return;
+
+            btn.disabled = true;
+            btn.textContent = "処理中...";
+
+            try {
+                const res = await callAdmin("adminResolveResetRequest", { requestId: id, memberId, newPassword });
+                if (res.success) {
+                    loadRequests();
+                } else {
+                    alert("失敗しました: " + res.message);
+                    btn.disabled = false;
+                    btn.textContent = "設定して処理済みにする";
+                }
+            } catch (e) {
+                alert("失敗しました: " + e.message);
+                btn.disabled = false;
+                btn.textContent = "設定して処理済みにする";
+            }
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+        }
+
+        // 空白（全角スペース含む）の有無だけで不一致扱いにならないよう正規化してから比較する
+        function normalize(s) {
+            return String(s || "").replace(/[\s　]/g, "");
+        }
+
+        // 申請内容（生徒の自己申告）と名簿(usersコレクション)の実データを突き合わせ、
+        // なりすまし・入力ミスの疑いを文字列の配列で返す（空配列 = 一致・自動処理OK）
+        function getMismatchProblems(r) {
+            const problems = [];
+
+            if (!r.memberId) {
+                problems.push("会員番号が入力されていません。");
+            } else if (!r.memberFound) {
+                problems.push(`会員番号「${escapeHtml(r.memberId)}」が名簿に見つかりません。`);
+            } else {
+                if (normalize(r.name) !== normalize(r.actualName)) {
+                    problems.push(`氏名が名簿と一致しません（名簿: ${escapeHtml(r.actualName || "（空）")}）。`);
+                }
+                if (normalize(r.classroom) !== normalize(r.actualClassroom)) {
+                    problems.push(`教室が名簿と一致しません（名簿: ${escapeHtml(r.actualClassroom || "（空）")}）。`);
+                }
+            }
+            return problems;
+        }
+
+        function buildMismatchWarning(r) {
+            const problems = getMismatchProblems(r);
+            if (problems.length === 0) return "";
+            return `<div class="mismatch-warning">⚠ ${problems.join("<br>⚠ ")}<br>本人確認をしてから処理してください。</div>`;
+        }
+    </script>
+</body>
+</html>

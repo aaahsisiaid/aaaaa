@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理者アカウント管理 - 管理者ページ</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #2c3e50 0%, #4a5f7a 100%); font-family: sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; min-height: 100vh; box-sizing: border-box; }
+        .container { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 560px; }
+        .back-link { position: sticky; top: 0; z-index: 20; display: block; background: white; margin: -25px -25px 15px; padding: 14px 25px; color: #34495e; text-decoration: none; font-size: 14px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.06); border-radius: 20px 20px 0 0; }
+        h2 { color: #333; margin: 0 0 15px; font-size: 20px; }
+        h3 { color: #333; font-size: 15px; margin: 25px 0 10px; border-top: 1px solid #eee; padding-top: 20px; }
+
+        .field-group { margin-bottom: 12px; text-align: left; }
+        .field-group label { display: block; font-size: 12px; font-weight: bold; color: #34495e; margin-bottom: 4px; }
+        .field-group input { width: 100%; padding: 9px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 14px; font-family: inherit; }
+        .field-group.checkbox { display: flex; align-items: center; gap: 8px; }
+        .field-group.checkbox input { width: auto; }
+        .field-group.checkbox label { margin: 0; font-weight: normal; color: #555; }
+        .hint { font-size: 11px; color: #999; margin-top: 4px; }
+
+        #saveBtn { padding: 11px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; background: #34495e; color: white; width: 100%; }
+        .status-msg { color: #888; font-size: 13px; margin-bottom: 10px; }
+
+        .admin-card { border: 1px solid #eee; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .admin-email { font-weight: bold; color: #333; font-size: 13px; word-break: break-all; }
+        .owner-badge { display: inline-block; background: #fff3cd; color: #8a6d3b; font-size: 10px; font-weight: bold; padding: 2px 7px; border-radius: 10px; margin-left: 6px; }
+        .self-badge { display: inline-block; background: #e3f2fd; color: #1565c0; font-size: 10px; font-weight: bold; padding: 2px 7px; border-radius: 10px; margin-left: 6px; }
+        .admin-last { font-size: 11px; color: #999; margin-top: 2px; }
+        .revoke-btn { border: none; border-radius: 6px; padding: 6px 10px; font-size: 11px; cursor: pointer; background: #ffe0e0; color: #d32f2f; white-space: nowrap; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="admin.html" class="back-link">← 管理者メニューへ戻る</a>
+        <h2><i class="fas fa-user-shield"></i> 管理者アカウント管理</h2>
+        <p style="font-size:12px; color:#999; margin-top:-10px;">このページはオーナー権限を持つアカウントのみ利用できます。</p>
+
+        <h3>管理者を追加</h3>
+        <div class="field-group">
+            <label>メールアドレス</label>
+            <input type="email" id="f_email" placeholder="admin@example.com">
+        </div>
+        <div class="field-group">
+            <label>初期パスワード（新規アカウント作成時は必須・6文字以上）</label>
+            <input type="password" id="f_password" placeholder="既存アカウントに権限だけ付与する場合は空欄でOK">
+            <div class="hint">既に管理者ログイン用のアカウントがある場合は空欄のままで構いません。</div>
+        </div>
+        <div class="field-group checkbox">
+            <input type="checkbox" id="f_makeOwner">
+            <label for="f_makeOwner">オーナー権限も付与する（管理者アカウントの追加・削除ができるようになります）</label>
+        </div>
+        <button id="saveBtn">追加する</button>
+
+        <h3>現在の管理者</h3>
+        <div id="statusMsg" class="status-msg">読み込み中...</div>
+        <div id="adminList"></div>
+    </div>
+
+    <script type="module">
+        import { requireAdmin, callAdmin } from "./admin-common.js";
+
+        let myUid = "";
+
+        requireAdmin((user, tokenResult) => {
+            if (tokenResult.claims.owner !== true) {
+                alert("このページはオーナー権限を持つアカウントのみ利用できます。");
+                window.location.href = "admin.html";
+                return;
+            }
+            myUid = user.uid;
+            loadAdmins();
+        });
+
+        async function loadAdmins() {
+            const statusMsg = document.getElementById("statusMsg");
+            statusMsg.textContent = "読み込み中...";
+            try {
+                const res = await callAdmin("adminListAdmins");
+                if (!res.success) {
+                    statusMsg.textContent = "エラー: " + res.message;
+                    return;
+                }
+                statusMsg.textContent = `${res.admins.length}件`;
+                renderList(res.admins);
+            } catch (e) {
+                statusMsg.textContent = "読み込み失敗: " + e.message;
+            }
+        }
+
+        function renderList(admins) {
+            const listEl = document.getElementById("adminList");
+            if (admins.length === 0) {
+                listEl.innerHTML = `<p style="color:#999; font-size:13px;">管理者がいません。</p>`;
+                return;
+            }
+
+            listEl.innerHTML = admins.map(a => `
+                <div class="admin-card">
+                    <div>
+                        <span class="admin-email">${escapeHtml(a.email || "")}</span>
+                        ${a.isOwner ? '<span class="owner-badge">オーナー</span>' : ''}
+                        ${a.uid === myUid ? '<span class="self-badge">あなた</span>' : ''}
+                        <div class="admin-last">最終ログイン: ${a.lastSignInTime ? escapeHtml(a.lastSignInTime) : '未ログイン'}</div>
+                    </div>
+                    <button class="revoke-btn" data-uid="${a.uid}" data-email="${escapeHtml(a.email || "")}">権限を削除</button>
+                </div>
+            `).join("");
+
+            listEl.querySelectorAll(".revoke-btn").forEach(btn => {
+                btn.addEventListener("click", () => revokeAdmin(btn.dataset.uid, btn.dataset.email));
+            });
+        }
+
+        document.getElementById("saveBtn").addEventListener("click", async () => {
+            const email = document.getElementById("f_email").value.trim();
+            const newPassword = document.getElementById("f_password").value;
+            const makeOwner = document.getElementById("f_makeOwner").checked;
+            if (!email) return alert("メールアドレスを入力してください。");
+
+            const saveBtn = document.getElementById("saveBtn");
+            saveBtn.disabled = true;
+            try {
+                const res = await callAdmin("adminGrantAdmin", { email, newPassword, makeOwner });
+                if (res.success) {
+                    document.getElementById("f_email").value = "";
+                    document.getElementById("f_password").value = "";
+                    document.getElementById("f_makeOwner").checked = false;
+                    loadAdmins();
+                } else {
+                    alert("追加に失敗しました: " + res.message);
+                }
+            } catch (e) {
+                alert("追加に失敗しました: " + e.message);
+            } finally {
+                saveBtn.disabled = false;
+            }
+        });
+
+        async function revokeAdmin(uid, email) {
+            if (!confirm(`${email} の管理者権限を削除します。よろしいですか？\n（アカウント自体は残り、権限だけ剥奪されます）`)) return;
+            try {
+                const res = await callAdmin("adminRevokeAdmin", { uid });
+                if (res.success) {
+                    loadAdmins();
+                } else {
+                    alert("削除に失敗しました: " + res.message);
+                }
+            } catch (e) {
+                alert("削除に失敗しました: " + e.message);
+            }
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+        }
+    </script>
+</body>
+</html>

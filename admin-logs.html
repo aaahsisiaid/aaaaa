@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>出席・視聴・ログイン履歴 - 管理者ページ</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #2c3e50 0%, #4a5f7a 100%); font-family: sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; min-height: 100vh; box-sizing: border-box; }
+        .container { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 680px; }
+        .back-link { position: sticky; top: 0; z-index: 20; display: block; background: white; margin: -25px -25px 15px; padding: 14px 25px; color: #34495e; text-decoration: none; font-size: 14px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.06); border-radius: 20px 20px 0 0; }
+        h2 { color: #333; margin: 0 0 15px; font-size: 20px; }
+
+        .filters { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+        .filters select, .filters input { padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+        .filters input { flex: 1; min-width: 160px; }
+        .filters button { padding: 10px 14px; border: none; border-radius: 8px; background: #34495e; color: white; font-weight: bold; cursor: pointer; }
+
+        .status-msg { color: #888; font-size: 13px; margin-bottom: 10px; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+        th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #eee; }
+        th { color: #888; font-weight: bold; font-size: 11px; }
+        .table-wrap { overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="admin.html" class="back-link">← 管理者メニューへ戻る</a>
+        <h2><i class="fas fa-list-check"></i> 出席・視聴・ログイン履歴</h2>
+
+        <div class="filters">
+            <select id="typeFilter">
+                <option value="attendance">出席ログ</option>
+                <option value="video">視聴ログ</option>
+                <option value="login">ログイン履歴</option>
+            </select>
+            <input type="text" id="memberIdFilter" placeholder="会員番号で絞り込み（任意）">
+            <button id="loadBtn">検索</button>
+        </div>
+
+        <div id="statusMsg" class="status-msg">条件を指定して検索してください。</div>
+        <div class="table-wrap">
+            <table id="logTable" hidden>
+                <thead id="logHead"></thead>
+                <tbody id="logBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script type="module">
+        import { requireAdmin, callAdmin } from "./admin-common.js";
+
+        requireAdmin(() => {
+            loadLogs();
+        });
+
+        document.getElementById("loadBtn").addEventListener("click", loadLogs);
+        document.getElementById("typeFilter").addEventListener("change", loadLogs);
+
+        async function loadLogs() {
+            const statusMsg = document.getElementById("statusMsg");
+            const table = document.getElementById("logTable");
+            statusMsg.textContent = "読み込み中...";
+            table.hidden = true;
+
+            const type = document.getElementById("typeFilter").value;
+            const memberId = document.getElementById("memberIdFilter").value.trim();
+
+            try {
+                const res = await callAdmin("adminListLogs", { type, memberId, limit: 200 });
+                if (!res.success) {
+                    statusMsg.textContent = "エラー: " + res.message;
+                    return;
+                }
+                statusMsg.textContent = `${res.logs.length}件（最新200件まで表示）`;
+                renderTable(type, res.logs);
+            } catch (e) {
+                statusMsg.textContent = "読み込み失敗: " + e.message;
+            }
+        }
+
+        function renderTable(type, logs) {
+            const head = document.getElementById("logHead");
+            const body = document.getElementById("logBody");
+            const table = document.getElementById("logTable");
+
+            if (logs.length === 0) {
+                table.hidden = true;
+                return;
+            }
+
+            if (type === "video") {
+                head.innerHTML = `<tr><th>日時</th><th>会員番号</th><th>氏名</th><th>種別</th><th>学年</th><th>科目</th><th>単元</th><th>時間(分)</th></tr>`;
+                body.innerHTML = logs.map(l => `
+                    <tr>
+                        <td>${fmt(l.timestamp)}</td>
+                        <td>${escapeHtml(l.memberId || "")}</td>
+                        <td>${escapeHtml(l.name || "")}</td>
+                        <td>${escapeHtml(l.type || "")}</td>
+                        <td>${escapeHtml(l.grade || "")}</td>
+                        <td>${escapeHtml(l.subject || "")}</td>
+                        <td>${escapeHtml(l.unitName || "")}</td>
+                        <td>${l.durationSec ? Math.round((l.durationSec / 60) * 10) / 10 : ""}</td>
+                    </tr>
+                `).join("");
+            } else if (type === "login") {
+                head.innerHTML = `<tr><th>日時</th><th>会員番号</th><th>氏名</th><th>学年</th></tr>`;
+                body.innerHTML = logs.map(l => `
+                    <tr>
+                        <td>${fmt(l.timestamp)}</td>
+                        <td>${escapeHtml(l.memberId || "")}</td>
+                        <td>${escapeHtml(l.name || "")}</td>
+                        <td>${escapeHtml(l.grade || "")}</td>
+                    </tr>
+                `).join("");
+            } else {
+                head.innerHTML = `<tr><th>日時</th><th>会員番号</th><th>氏名</th><th>講座ID</th><th>状態</th></tr>`;
+                body.innerHTML = logs.map(l => `
+                    <tr>
+                        <td>${fmt(l.timestamp)}</td>
+                        <td>${escapeHtml(l.memberId || "")}</td>
+                        <td>${escapeHtml(l.name || "")}</td>
+                        <td>${escapeHtml(l.courseId || "")}</td>
+                        <td>${escapeHtml(l.status || "")}</td>
+                    </tr>
+                `).join("");
+            }
+
+            table.hidden = false;
+        }
+
+        function fmt(ts) {
+            return ts ? new Date(ts).toLocaleString("ja-JP") : "";
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+        }
+    </script>
+</body>
+</html>

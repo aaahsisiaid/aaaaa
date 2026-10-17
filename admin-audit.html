@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理者操作ログ - 管理者ページ</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #2c3e50 0%, #4a5f7a 100%); font-family: sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; min-height: 100vh; box-sizing: border-box; }
+        .container { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 780px; }
+        .back-link { position: sticky; top: 0; z-index: 20; display: block; background: white; margin: -25px -25px 15px; padding: 14px 25px; color: #34495e; text-decoration: none; font-size: 14px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.06); border-radius: 20px 20px 0 0; }
+        h2 { color: #333; margin: 0 0 8px; font-size: 20px; }
+        .hint { font-size: 12px; color: #999; margin-bottom: 15px; }
+
+        .filters { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+        .filters select, .filters input { padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+        .filters input { flex: 1; min-width: 200px; }
+
+        .status-msg { color: #888; font-size: 13px; margin-bottom: 10px; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+        th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #eee; vertical-align: top; }
+        th { color: #888; font-weight: bold; font-size: 11px; white-space: nowrap; }
+        td.detail-cell { max-width: 320px; word-break: break-all; color: #555; }
+        td.action-cell { white-space: nowrap; font-weight: bold; color: #34495e; }
+        .table-wrap { overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="admin.html" class="back-link">← 管理者メニューへ戻る</a>
+        <h2><i class="fas fa-clipboard-list"></i> 管理者操作ログ</h2>
+        <p class="hint">このページはオーナー権限を持つアカウントのみ利用できます。生徒情報の変更・パスワードリセット・お知らせ操作の履歴（誰が・いつ・何を）を記録しています。</p>
+
+        <div class="filters">
+            <select id="actionFilter">
+                <option value="">すべての種別</option>
+                <option value="生徒情報変更">生徒情報変更</option>
+                <option value="パスワード">パスワードリセット（すべて）</option>
+                <option value="お知らせ">お知らせ操作（すべて）</option>
+            </select>
+            <input type="text" id="keywordFilter" placeholder="会員番号・氏名・操作者メールで絞り込み">
+        </div>
+
+        <div id="statusMsg" class="status-msg">読み込み中...</div>
+        <div class="table-wrap">
+            <table id="logTable" hidden>
+                <thead>
+                    <tr><th>日時</th><th>操作者</th><th>種別</th><th>対象</th><th>内容</th></tr>
+                </thead>
+                <tbody id="logBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script type="module">
+        import { requireAdmin, callAdmin } from "./admin-common.js";
+
+        let allLogs = [];
+
+        requireAdmin((user, tokenResult) => {
+            if (tokenResult.claims.owner !== true) {
+                alert("このページはオーナー権限を持つアカウントのみ利用できます。");
+                window.location.href = "admin.html";
+                return;
+            }
+            loadLogs();
+        });
+
+        document.getElementById("actionFilter").addEventListener("change", render);
+        document.getElementById("keywordFilter").addEventListener("input", render);
+
+        async function loadLogs() {
+            const statusMsg = document.getElementById("statusMsg");
+            statusMsg.textContent = "読み込み中...";
+            try {
+                const res = await callAdmin("adminListActionLogs", { limit: 500 });
+                if (!res.success) {
+                    statusMsg.textContent = "エラー: " + res.message;
+                    return;
+                }
+                allLogs = res.logs;
+                render();
+            } catch (e) {
+                statusMsg.textContent = "読み込み失敗: " + e.message;
+            }
+        }
+
+        function render() {
+            const statusMsg = document.getElementById("statusMsg");
+            const table = document.getElementById("logTable");
+            const body = document.getElementById("logBody");
+
+            const actionFilter = document.getElementById("actionFilter").value;
+            const keyword = document.getElementById("keywordFilter").value.trim().toLowerCase();
+
+            const filtered = allLogs.filter(l => {
+                if (actionFilter && !(l.action || "").includes(actionFilter)) return false;
+                if (keyword) {
+                    const hay = [l.targetMemberId, l.targetName, l.actorEmail].filter(Boolean).join(" ").toLowerCase();
+                    if (!hay.includes(keyword)) return false;
+                }
+                return true;
+            });
+
+            statusMsg.textContent = `${filtered.length}件（全${allLogs.length}件中・最新500件まで保持）`;
+
+            if (filtered.length === 0) {
+                table.hidden = true;
+                return;
+            }
+
+            body.innerHTML = filtered.map(l => `
+                <tr>
+                    <td>${fmt(l.timestamp)}</td>
+                    <td>${escapeHtml(l.actorEmail || "")}</td>
+                    <td class="action-cell">${escapeHtml(l.action || "")}</td>
+                    <td>${escapeHtml(l.targetMemberId || "")}${l.targetName ? ` (${escapeHtml(l.targetName)})` : ""}</td>
+                    <td class="detail-cell">${escapeHtml(l.detail || "")}</td>
+                </tr>
+            `).join("");
+
+            table.hidden = false;
+        }
+
+        function fmt(ts) {
+            return ts ? new Date(ts).toLocaleString("ja-JP") : "";
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+        }
+    </script>
+</body>
+</html>

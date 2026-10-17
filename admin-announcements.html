@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>アナウンス管理 - 管理者ページ</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #2c3e50 0%, #4a5f7a 100%); font-family: sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; min-height: 100vh; box-sizing: border-box; }
+        .container { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 620px; }
+        .back-link { position: sticky; top: 0; z-index: 20; display: block; background: white; margin: -25px -25px 15px; padding: 14px 25px; color: #34495e; text-decoration: none; font-size: 14px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.06); border-radius: 20px 20px 0 0; }
+        h2 { color: #333; margin: 0 0 15px; font-size: 20px; }
+        h3 { color: #333; font-size: 15px; margin: 25px 0 10px; border-top: 1px solid #eee; padding-top: 20px; }
+
+        .field-group { margin-bottom: 12px; text-align: left; }
+        .field-group label { display: block; font-size: 12px; font-weight: bold; color: #34495e; margin-bottom: 4px; }
+        .field-group input, .field-group textarea { width: 100%; padding: 9px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 14px; font-family: inherit; }
+        .field-group textarea { min-height: 70px; resize: vertical; }
+        .field-hint { font-size: 11px; color: #888; margin-top: 4px; }
+        .field-row { display: flex; gap: 10px; }
+        .field-row .field-group { flex: 1; }
+
+        .chip-group { display: flex; flex-wrap: wrap; gap: 6px; }
+        .chip-group label { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: normal; color: #333; background: #f5f5f5; border: 1px solid #ddd; border-radius: 20px; padding: 5px 10px; cursor: pointer; margin: 0; }
+        .chip-group input { width: auto; margin: 0; }
+
+        .checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 13px; color: #333; }
+
+        #saveBtn, #cancelEditBtn { padding: 11px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; }
+        #saveBtn { background: #34495e; color: white; flex: 1; }
+        #cancelEditBtn { background: #eee; color: #333; display: none; }
+        .form-actions { display: flex; gap: 8px; }
+
+        .status-msg { color: #888; font-size: 13px; margin-bottom: 10px; }
+
+        .ann-card { border: 1px solid #eee; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+        .ann-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 4px; }
+        .ann-text { font-weight: bold; color: #333; font-size: 14px; white-space: pre-wrap; }
+        .ann-sub { font-size: 12px; color: #888; margin: 6px 0 8px; }
+        .badge { font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: bold; white-space: nowrap; }
+        .badge-off { background: #eee; color: #888; }
+        .badge-on { background: #e3f2fd; color: #1565c0; }
+        .ann-actions { display: flex; gap: 6px; }
+        .ann-actions button { border: none; border-radius: 6px; padding: 5px 10px; font-size: 11px; cursor: pointer; }
+        .edit-btn { background: #e3f2fd; color: #1565c0; }
+        .delete-btn { background: #ffe0e0; color: #d32f2f; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="admin.html" class="back-link">← 管理者メニューへ戻る</a>
+        <h2><i class="fas fa-tower-broadcast"></i> アナウンス管理</h2>
+        <div class="field-hint" style="margin-bottom:10px;">生徒のマイページ上部に表示されます（生徒個別の「特別メッセージ」より上に表示）。学年・教室を指定しない場合は全員に表示されます。</div>
+
+        <h3 id="formTitle">新しいアナウンスを追加</h3>
+        <div class="field-group">
+            <label>メッセージ本文</label>
+            <textarea id="f_text" placeholder="アナウンスの本文"></textarea>
+        </div>
+        <div class="field-group">
+            <label>リンクボタンの文言（任意）</label>
+            <input type="text" id="f_linkText" placeholder="例：詳しくはこちら">
+        </div>
+        <div class="field-group">
+            <label>リンク先URL（任意）</label>
+            <input type="text" id="f_linkUrl" placeholder="https://…">
+            <div class="field-hint">http/https で始まらない場合はボタンは表示されません。</div>
+        </div>
+        <div class="field-row">
+            <div class="field-group">
+                <label>公開開始日（任意）</label>
+                <input type="date" id="f_startDate">
+            </div>
+            <div class="field-group">
+                <label>公開終了日（任意）</label>
+                <input type="date" id="f_endDate">
+            </div>
+        </div>
+        <div class="field-hint" style="margin-top:-6px; margin-bottom:12px;">未入力の項目は制限なし（開始日のみなら以降ずっと、終了日のみならその日まで表示）。日付はJST基準です。</div>
+        <div class="field-group">
+            <label>対象学年（未選択の場合は全学年）</label>
+            <div class="chip-group" id="gradeChips">
+                <label><input type="checkbox" value="中1"> 中1</label>
+                <label><input type="checkbox" value="中2"> 中2</label>
+                <label><input type="checkbox" value="中3"> 中3</label>
+            </div>
+        </div>
+        <div class="field-group">
+            <label>対象教室（未選択の場合は全教室）</label>
+            <div class="chip-group" id="classroomChips">読み込み中...</div>
+        </div>
+        <div class="checkbox-row">
+            <input type="checkbox" id="f_enabled" checked> <label for="f_enabled" style="margin:0;">表示を有効にする</label>
+        </div>
+        <div class="form-actions">
+            <button id="saveBtn">追加する</button>
+            <button id="cancelEditBtn">編集をやめる</button>
+        </div>
+
+        <h3>登録済みのアナウンス</h3>
+        <div id="statusMsg" class="status-msg">読み込み中...</div>
+        <div id="annList"></div>
+    </div>
+
+    <script type="module">
+        import { requireAdmin, callAdmin } from "./admin-common.js";
+
+        let editingId = null;
+        let allClassrooms = [];
+
+        requireAdmin(() => {
+            loadClassrooms();
+            loadAnnouncements();
+        });
+
+        async function loadClassrooms() {
+            const el = document.getElementById("classroomChips");
+            try {
+                const res = await callAdmin("adminListClassrooms");
+                if (!res.success) {
+                    el.textContent = "教室一覧の取得に失敗しました: " + res.message;
+                    return;
+                }
+                allClassrooms = res.classrooms;
+                if (allClassrooms.length === 0) {
+                    el.innerHTML = `<span class="field-hint">登録されている教室がありません。</span>`;
+                    return;
+                }
+                el.innerHTML = allClassrooms.map(c => `<label><input type="checkbox" value="${escapeHtml(c)}"> ${escapeHtml(c)}</label>`).join("");
+            } catch (e) {
+                el.textContent = "教室一覧の取得に失敗しました: " + e.message;
+            }
+        }
+
+        async function loadAnnouncements() {
+            const statusMsg = document.getElementById("statusMsg");
+            statusMsg.textContent = "読み込み中...";
+            try {
+                const res = await callAdmin("adminListAnnouncements");
+                if (!res.success) {
+                    statusMsg.textContent = "エラー: " + res.message;
+                    return;
+                }
+                statusMsg.textContent = `${res.announcements.length}件`;
+                renderList(res.announcements);
+            } catch (e) {
+                statusMsg.textContent = "読み込み失敗: " + e.message;
+            }
+        }
+
+        function renderList(list) {
+            const listEl = document.getElementById("annList");
+            if (list.length === 0) {
+                listEl.innerHTML = `<p style="color:#999; font-size:13px;">アナウンスはまだありません。</p>`;
+                return;
+            }
+
+            listEl.innerHTML = list.map(a => `
+                <div class="ann-card">
+                    <div class="ann-top">
+                        <span class="ann-text">${escapeHtml(a.text || "")}</span>
+                        <span class="badge ${a.enabled ? "badge-on" : "badge-off"}">${a.enabled ? "表示中" : "非表示"}</span>
+                    </div>
+                    <div class="ann-sub">対象学年: ${(a.targetGrades && a.targetGrades.length) ? escapeHtml(a.targetGrades.join("・")) : "全学年"} / 対象教室: ${(a.targetClassrooms && a.targetClassrooms.length) ? escapeHtml(a.targetClassrooms.join("・")) : "全教室"}</div>
+                    <div class="ann-sub">公開期間: ${escapeHtml(a.startDate || "指定なし")} 〜 ${escapeHtml(a.endDate || "指定なし")}</div>
+                    <div class="ann-actions">
+                        <button class="edit-btn" data-id="${a.id}">編集</button>
+                        <button class="delete-btn" data-id="${a.id}">削除</button>
+                    </div>
+                </div>
+            `).join("");
+
+            listEl.querySelectorAll(".edit-btn").forEach(btn => {
+                btn.addEventListener("click", () => startEdit(list.find(a => a.id === btn.dataset.id)));
+            });
+            listEl.querySelectorAll(".delete-btn").forEach(btn => {
+                btn.addEventListener("click", () => deleteAnnouncement(btn.dataset.id));
+            });
+        }
+
+        function setCheckedValues(containerId, values) {
+            document.querySelectorAll(`#${containerId} input[type=checkbox]`).forEach(cb => {
+                cb.checked = (values || []).includes(cb.value);
+            });
+        }
+
+        function getCheckedValues(containerId) {
+            return [...document.querySelectorAll(`#${containerId} input[type=checkbox]:checked`)].map(cb => cb.value);
+        }
+
+        function startEdit(a) {
+            if (!a) return;
+            editingId = a.id;
+            document.getElementById("formTitle").textContent = "アナウンスを編集";
+            document.getElementById("f_text").value = a.text || "";
+            document.getElementById("f_linkText").value = a.linkText || "";
+            document.getElementById("f_linkUrl").value = a.linkUrl || "";
+            document.getElementById("f_startDate").value = a.startDate || "";
+            document.getElementById("f_endDate").value = a.endDate || "";
+            document.getElementById("f_enabled").checked = a.enabled !== false;
+            setCheckedValues("gradeChips", a.targetGrades);
+            setCheckedValues("classroomChips", a.targetClassrooms);
+            document.getElementById("saveBtn").textContent = "更新する";
+            document.getElementById("cancelEditBtn").style.display = "block";
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        function resetForm() {
+            editingId = null;
+            document.getElementById("formTitle").textContent = "新しいアナウンスを追加";
+            document.getElementById("f_text").value = "";
+            document.getElementById("f_linkText").value = "";
+            document.getElementById("f_linkUrl").value = "";
+            document.getElementById("f_startDate").value = "";
+            document.getElementById("f_endDate").value = "";
+            document.getElementById("f_enabled").checked = true;
+            setCheckedValues("gradeChips", []);
+            setCheckedValues("classroomChips", []);
+            document.getElementById("saveBtn").textContent = "追加する";
+            document.getElementById("cancelEditBtn").style.display = "none";
+        }
+
+        document.getElementById("cancelEditBtn").addEventListener("click", resetForm);
+
+        document.getElementById("saveBtn").addEventListener("click", async () => {
+            const text = document.getElementById("f_text").value.trim();
+            if (!text) return alert("メッセージ本文は必須です。");
+
+            const startDate = document.getElementById("f_startDate").value;
+            const endDate = document.getElementById("f_endDate").value;
+            if (startDate && endDate && startDate > endDate) {
+                return alert("公開終了日は公開開始日より後の日付にしてください。");
+            }
+
+            const announcement = {
+                text,
+                linkText: document.getElementById("f_linkText").value.trim(),
+                linkUrl: document.getElementById("f_linkUrl").value.trim(),
+                startDate,
+                endDate,
+                targetGrades: getCheckedValues("gradeChips"),
+                targetClassrooms: getCheckedValues("classroomChips"),
+                enabled: document.getElementById("f_enabled").checked
+            };
+
+            const saveBtn = document.getElementById("saveBtn");
+            saveBtn.disabled = true;
+            try {
+                const res = await callAdmin("adminSaveAnnouncement", { id: editingId, announcement });
+                if (res.success) {
+                    resetForm();
+                    loadAnnouncements();
+                } else {
+                    alert("保存に失敗しました: " + res.message);
+                }
+            } catch (e) {
+                alert("保存に失敗しました: " + e.message);
+            } finally {
+                saveBtn.disabled = false;
+            }
+        });
+
+        async function deleteAnnouncement(id) {
+            if (!confirm("このアナウンスを削除します。よろしいですか？")) return;
+            try {
+                const res = await callAdmin("adminDeleteAnnouncement", { id });
+                if (res.success) {
+                    if (editingId === id) resetForm();
+                    loadAnnouncements();
+                } else {
+                    alert("削除に失敗しました: " + res.message);
+                }
+            } catch (e) {
+                alert("削除に失敗しました: " + e.message);
+            }
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+        }
+    </script>
+</body>
+</html>

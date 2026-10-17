@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理者ページ</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #2c3e50 0%, #4a5f7a 100%); font-family: sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; min-height: 100vh; box-sizing: border-box; }
+        .container { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 500px; text-align: center; }
+        h1 { color: #333; margin-bottom: 5px; font-size: 22px; }
+        .user-info { color: #888; margin-bottom: 25px; font-size: 13px; }
+        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .menu-item { background: #f8f9fa; padding: 20px 12px; border-radius: 12px; text-decoration: none; color: #333; font-weight: bold; border: 1px solid #eee; transition: 0.3s; display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 13px; }
+        .menu-item:hover { background: #e9ecef; transform: translateY(-2px); }
+        .menu-item i { font-size: 22px; color: #34495e; }
+        .logout { grid-column: span 2; background: #fff0f0; border-color: #ffcccc; color: #d32f2f; margin-top: 4px; }
+        .logout i { color: #d32f2f; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 管理者ページ</h1>
+        <div id="userInfo" class="user-info">読み込み中...</div>
+
+        <div class="menu-grid">
+            <a href="admin-users.html" class="menu-item"><i class="fas fa-user-graduate"></i><span>生徒一覧・編集</span></a>
+            <a href="admin-resets.html" class="menu-item"><i class="fas fa-key"></i><span>パスワードリセット申請</span></a>
+            <a href="admin-logs.html" class="menu-item"><i class="fas fa-list-check"></i><span>出席・視聴・ログイン履歴</span></a>
+            <a href="admin-notices.html" class="menu-item"><i class="fas fa-bullhorn"></i><span>お知らせ管理</span></a>
+            <a href="admin-announcements.html" class="menu-item"><i class="fas fa-tower-broadcast"></i><span>アナウンス管理</span></a>
+            <a href="admin-admins.html" id="adminsMenuItem" class="menu-item" style="display:none;"><i class="fas fa-user-shield"></i><span>管理者アカウント管理</span></a>
+            <a href="admin-audit.html" id="auditMenuItem" class="menu-item" style="display:none;"><i class="fas fa-clipboard-list"></i><span>管理者操作ログ</span></a>
+            <a href="#" id="logoutBtn" class="menu-item logout"><i class="fas fa-sign-out-alt"></i><span>ログアウト</span></a>
+        </div>
+    </div>
+
+    <script type="module">
+        import { requireAdmin, adminLogout } from "./admin-common.js";
+
+        requireAdmin((user, tokenResult) => {
+            document.getElementById("userInfo").textContent = user.email;
+            if (tokenResult.claims.owner === true) {
+                document.getElementById("adminsMenuItem").style.display = "flex";
+                document.getElementById("auditMenuItem").style.display = "flex";
+            }
+        });
+
+        document.getElementById("logoutBtn").addEventListener("click", (e) => {
+            e.preventDefault();
+            adminLogout();
+        });
+    </script>
+</body>
+</html>

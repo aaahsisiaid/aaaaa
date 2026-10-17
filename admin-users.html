@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生徒一覧・編集 - 管理者ページ</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #2c3e50 0%, #4a5f7a 100%); font-family: sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; min-height: 100vh; box-sizing: border-box; }
+        .container { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 720px; }
+        .back-link { position: sticky; top: 0; z-index: 20; display: block; background: white; margin: -25px -25px 15px; padding: 14px 25px; color: #34495e; text-decoration: none; font-size: 14px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.06); border-radius: 20px 20px 0 0; }
+        h2 { color: #333; margin: 0 0 18px; font-size: 20px; }
+
+        .filters { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+        .filters select, .filters input { padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+        .filters input { flex: 1; min-width: 160px; }
+        .filters button { padding: 10px 14px; border: none; border-radius: 8px; background: #34495e; color: white; font-weight: bold; cursor: pointer; }
+
+        .status-msg { color: #888; font-size: 13px; margin-bottom: 10px; }
+        .tel-info { border: 1px solid #eee; border-radius: 8px; padding: 10px; font-size: 12.5px; color: #333; line-height: 1.7; background: #f9fafb; }
+        #phoneResults:not(:empty) { margin-bottom: 10px; }
+
+        .user-card { border: 1px solid #eee; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 10px; cursor: pointer; transition: 0.2s; }
+        .user-card:hover { background: #f8f9fa; }
+        .user-main { font-size: 14px; color: #333; }
+        .user-main b { font-size: 15px; }
+        .user-sub { font-size: 12px; color: #888; margin-top: 3px; }
+        .badge { font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: bold; margin-left: 6px; }
+        .badge-disabled { background: #ffe0e0; color: #d32f2f; }
+        .badge-first { background: #fff3cd; color: #856404; }
+
+        .modal-overlay[hidden] { display: none; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; z-index: 30; }
+        .modal { background: white; border-radius: 16px; padding: 25px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+        .modal h3 { margin-top: 0; color: #333; }
+        .field-group { margin-bottom: 12px; text-align: left; }
+        .field-group label { display: block; font-size: 12px; font-weight: bold; color: #34495e; margin-bottom: 4px; }
+        .field-group input[type=text], .field-group select { width: 100%; padding: 9px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
+        .checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 13px; color: #333; }
+
+        .reg-list { border: 1px solid #eee; border-radius: 8px; padding: 8px; margin-bottom: 10px; max-height: 130px; overflow-y: auto; }
+        .reg-item { display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding: 4px 2px; border-bottom: 1px dashed #eee; }
+        .reg-item:last-child { border-bottom: none; }
+        .reg-item button { border: none; background: #ffe0e0; color: #d32f2f; border-radius: 6px; font-size: 11px; padding: 3px 7px; cursor: pointer; }
+        .reg-empty { font-size: 12px; color: #aaa; padding: 4px; }
+        .field-hint { font-size: 11px; color: #888; margin-top: 4px; }
+
+        .period-block { margin-bottom: 14px; }
+        .period-label { font-size: 12px; font-weight: bold; color: #34495e; margin-bottom: 4px; }
+        .reg-add-row { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+        .reg-add-row select { flex: 1; min-width: 70px; padding: 6px 4px; border: 1px solid #ddd; border-radius: 6px; font-size: 11px; }
+        .reg-add-row .reg-course-select { flex: 2; min-width: 120px; }
+        .reg-add-row button { border: none; background: #34495e; color: white; border-radius: 6px; font-size: 11px; padding: 6px 10px; cursor: pointer; white-space: nowrap; }
+
+        .modal-actions { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+        .modal-actions button { flex: 1; padding: 11px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; }
+        .btn-save { background: #34495e; color: white; }
+        .btn-close { background: #eee; color: #333; }
+        .btn-pw { background: #4A90E2; color: white; }
+
+        .pw-row { display: flex; gap: 6px; margin-top: 8px; }
+        .pw-row input { flex: 1; padding: 9px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; }
+        .pw-row button { padding: 9px 12px; border: none; border-radius: 8px; background: #4A90E2; color: white; font-weight: bold; cursor: pointer; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="admin.html" class="back-link">← 管理者メニューへ戻る</a>
+        <h2><i class="fas fa-user-graduate"></i> 生徒一覧・検索・編集</h2>
+
+        <div class="filters">
+            <select id="gradeFilter">
+                <option value="">学年: すべて</option>
+                <option value="中1">中1</option>
+                <option value="中2">中2</option>
+                <option value="中3">中3</option>
+            </select>
+            <input type="text" id="searchBox" placeholder="会員番号・氏名で検索">
+            <button id="reloadBtn">再読込</button>
+        </div>
+
+        <div class="filters">
+            <input type="text" id="phoneSearchBox" placeholder="電話番号で検索（TELDataシートを直接検索・3文字以上）">
+            <button id="phoneSearchBtn">検索</button>
+        </div>
+        <div id="phoneResults"></div>
+
+        <div id="statusMsg" class="status-msg">読み込み中...</div>
+        <div id="userList"></div>
+    </div>
+
+    <div id="editOverlay" class="modal-overlay" hidden>
+        <div class="modal">
+            <h3 id="modalTitle">生徒情報の編集</h3>
+
+            <div class="field-group">
+                <label>氏名</label>
+                <input type="text" id="f_name">
+            </div>
+            <div class="field-group">
+                <label>学年</label>
+                <select id="f_grade">
+                    <option value="中1">中1</option>
+                    <option value="中2">中2</option>
+                    <option value="中3">中3</option>
+                </select>
+            </div>
+            <div class="field-group">
+                <label>教室</label>
+                <input type="text" id="f_classroom">
+            </div>
+            <div class="field-group">
+                <label>教室CD (cNo)</label>
+                <input type="text" id="f_cNo">
+            </div>
+            <div class="field-group">
+                <label>現在の登録曜日 (currentDay)</label>
+                <input type="text" id="f_currentDay">
+                <div id="currentDayHint" class="field-hint"></div>
+            </div>
+            <div class="checkbox-row">
+                <input type="checkbox" id="f_isFirst"> <label for="f_isFirst" style="margin:0;">次回ログイン時にパスワード変更を要求する</label>
+            </div>
+            <div class="checkbox-row">
+                <input type="checkbox" id="f_disabled"> <label for="f_disabled" style="margin:0;">アカウントを無効化する</label>
+            </div>
+            <div id="disabledStatusHint" class="field-hint" style="margin-top:-6px; margin-bottom:10px;"></div>
+
+            <div class="field-group">
+                <label>この生徒のマイページだけに表示する特別メッセージ</label>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="f_specialMsgEnabled"> <label for="f_specialMsgEnabled" style="margin:0;">表示する</label>
+                </div>
+                <textarea id="f_specialMsgText" rows="3" placeholder="メッセージ本文" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box; font-size:14px; font-family:inherit; resize:vertical;"></textarea>
+                <div style="display:flex; gap:6px; margin-top:6px;">
+                    <input type="text" id="f_specialMsgLinkText" placeholder="ボタンの文言（例：詳しくはこちら）" style="flex:1; padding:9px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box; font-size:13px;">
+                </div>
+                <input type="text" id="f_specialMsgLinkUrl" placeholder="リンク先URL（https://…）" style="width:100%; margin-top:6px; padding:9px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box; font-size:13px;">
+                <div class="field-hint">リンク先URLが空、または http/https で始まらない場合はボタンは表示されません。</div>
+            </div>
+
+            <div class="field-group">
+                <label>登録講座</label>
+                <div id="registrationsArea"></div>
+            </div>
+
+            <div class="field-group">
+                <label>電話番号台帳の情報（TELDataシートより取得・参照のみ）</label>
+                <div id="telInfo" class="tel-info">読み込み中...</div>
+            </div>
+
+            <div class="field-group">
+                <label>パスワード再設定</label>
+                <div class="pw-row">
+                    <input type="text" id="f_newPassword" placeholder="新しいパスワード（6文字以上）">
+                    <button id="applyPwBtn">設定</button>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-save" id="saveBtn">保存する</button>
+                <button class="btn-close" id="closeBtn">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { requireAdmin, callAdmin, app } from "./admin-common.js";
+
+        const db = getFirestore(app);
+
+        const PERIOD_FIELDS = [
+            { field: "nextRegistration", label: "第Ⅰ期", optionsDoc: "next_course_options" },
+            { field: "period2Registration", label: "第Ⅱ期", optionsDoc: "next_course_options_p2" },
+            { field: "period3Registration", label: "第Ⅲ期", optionsDoc: "next_course_options_p3" },
+            { field: "period4Registration", label: "第Ⅳ期", optionsDoc: "next_course_options_p4" }
+        ];
+        const DAYS = ["月", "火", "水", "木", "金", "土"];
+        const SLOTS = ["1時間目", "2時間目"];
+        const optionsCache = {};
+
+        // 各期の登録配列から登録曜日を重複なしで抽出し、月火水木金土の順に並べる
+        function getDaysForField(user, field) {
+            const days = [...new Set((user[field] || []).map(r => r.day).filter(Boolean))];
+            days.sort((a, b) => DAYS.indexOf(a) - DAYS.indexOf(b));
+            return days.length > 0 ? days.join("・") + "曜" : "-";
+        }
+
+        // 第Ⅰ〜Ⅳ期すべての登録曜日をまとめて表示（登録がある期のみ表示）
+        function getRegisteredDaysDisplay(user) {
+            const parts = PERIOD_FIELDS
+                .map(p => ({ label: p.label, days: getDaysForField(user, p.field) }))
+                .filter(p => p.days !== "-")
+                .map(p => `${p.label}:${p.days}`);
+            return parts.length > 0 ? parts.join(" / ") : "-";
+        }
+
+        function updateCurrentDayHint() {
+            const hintEl = document.getElementById("currentDayHint");
+            if (!hintEl || !currentUser) return;
+            hintEl.textContent = "登録講座から算出: " + getRegisteredDaysDisplay(currentUser);
+        }
+
+        let allUsers = [];
+        let currentUser = null;
+
+        requireAdmin(() => {
+            loadUsers();
+        });
+
+        document.getElementById("reloadBtn").addEventListener("click", loadUsers);
+        document.getElementById("gradeFilter").addEventListener("change", loadUsers);
+        document.getElementById("searchBox").addEventListener("input", renderList);
+
+        async function loadUsers() {
+            const statusMsg = document.getElementById("statusMsg");
+            statusMsg.textContent = "読み込み中...";
+            const grade = document.getElementById("gradeFilter").value;
+            try {
+                const res = await callAdmin("adminListUsers", { grade });
+                if (!res.success) {
+                    statusMsg.textContent = "エラー: " + res.message;
+                    return;
+                }
+                allUsers = res.users.sort((a, b) => (a.memberId > b.memberId ? 1 : -1));
+                statusMsg.textContent = res.truncated
+                    ? `${allUsers.length}件（上限に達しており、一部の生徒が表示されていない可能性があります。学年で絞り込んでください）`
+                    : `${allUsers.length}件`;
+                renderList();
+            } catch (e) {
+                statusMsg.textContent = "読み込み失敗: " + e.message;
+            }
+        }
+
+        function renderList() {
+            const q = document.getElementById("searchBox").value.trim().toLowerCase();
+            const listEl = document.getElementById("userList");
+            const filtered = allUsers.filter(u =>
+                !q || u.memberId.toLowerCase().includes(q) || (u.name || "").toLowerCase().includes(q)
+            );
+
+            if (filtered.length === 0) {
+                listEl.innerHTML = `<p style="color:#999; font-size:13px;">該当する生徒がいません。</p>`;
+                return;
+            }
+
+            listEl.innerHTML = filtered.map(u => `
+                <div class="user-card" data-id="${u.memberId}">
+                    <div>
+                        <div class="user-main"><b>${escapeHtml(u.name || "(氏名未設定)")}</b> ${escapeHtml(u.grade || "")}
+                            ${u.disabled ? '<span class="badge badge-disabled">無効</span>' : ""}
+                            ${u.isFirst === "TRUE" ? '<span class="badge badge-first">要PW変更</span>' : ""}
+                        </div>
+                        <div class="user-sub">会員番号: ${u.memberId} / 教室: ${escapeHtml(u.classroom || "-")} / 登録曜日: ${escapeHtml(getRegisteredDaysDisplay(u))}</div>
+                    </div>
+                    <i class="fas fa-chevron-right" style="color:#ccc;"></i>
+                </div>
+            `).join("");
+
+            listEl.querySelectorAll(".user-card").forEach(card => {
+                card.addEventListener("click", () => openEdit(card.dataset.id));
+            });
+        }
+
+        function openEdit(memberId) {
+            currentUser = allUsers.find(u => u.memberId === memberId);
+            if (!currentUser) return;
+
+            document.getElementById("modalTitle").textContent = `生徒情報の編集（会員番号: ${currentUser.memberId}）`;
+            document.getElementById("f_name").value = currentUser.name || "";
+            document.getElementById("f_grade").value = currentUser.grade || "中1";
+            document.getElementById("f_classroom").value = currentUser.classroom || "";
+            document.getElementById("f_cNo").value = currentUser.cNo || "";
+            document.getElementById("f_currentDay").value = currentUser.currentDay || "";
+            document.getElementById("f_isFirst").checked = currentUser.isFirst === "TRUE";
+            document.getElementById("f_disabled").checked = !!currentUser.disabled;
+            document.getElementById("f_newPassword").value = "";
+
+            const specialMessage = currentUser.specialMessage || {};
+            document.getElementById("f_specialMsgEnabled").checked = !!specialMessage.enabled;
+            document.getElementById("f_specialMsgText").value = specialMessage.text || "";
+            document.getElementById("f_specialMsgLinkText").value = specialMessage.linkText || "";
+            document.getElementById("f_specialMsgLinkUrl").value = specialMessage.linkUrl || "";
+
+            renderRegistrationsArea();
+            updateCurrentDayHint();
+
+            document.getElementById("editOverlay").hidden = false;
+            loadTelInfo(currentUser.memberId);
+            prefillPassword(currentUser.memberId);
+            loadAuthDisabledStatus(currentUser.memberId);
+        }
+
+        // Firestoreのdisabledフィールドは編集画面用のコピーで、Authenticationコンソールでの直接操作等により
+        // 食い違うことがあるため、開いた時点でのAuthenticationの実際の状態を取得してチェックボックスに反映する
+        async function loadAuthDisabledStatus(memberId) {
+            const hintEl = document.getElementById("disabledStatusHint");
+            const checkboxEl = document.getElementById("f_disabled");
+            hintEl.textContent = "ログイン可否を確認中...";
+            try {
+                const res = await callAdmin("adminGetAuthStatus", { memberId });
+                if (!currentUser || currentUser.memberId !== memberId) return; // 別の生徒に切り替わっていたら反映しない
+
+                if (!res.success) {
+                    hintEl.textContent = "ログイン可否の確認に失敗しました: " + res.message;
+                    return;
+                }
+                checkboxEl.checked = res.disabled;
+                currentUser.disabled = res.disabled;
+                if (res.synced) {
+                    hintEl.textContent = "登録情報とAuthenticationの状態が食い違っていたため、実際の状態に自動で修正しました。";
+                    renderList(); // 一覧の「無効」バッジも最新状態に反映する
+                } else {
+                    hintEl.textContent = "";
+                }
+            } catch (e) {
+                hintEl.textContent = "ログイン可否の確認に失敗しました: " + e.message;
+            }
+        }
+
+        async function prefillPassword(memberId) {
+            const pwInput = document.getElementById("f_newPassword");
+            pwInput.title = "";
+            try {
+                const res = await callAdmin("adminLookupMemberPasswords", { memberIds: [memberId] });
+                if (!res.success) return;
+                const pw = res.passwords[memberId];
+                if (pw && !pwInput.value && currentUser && currentUser.memberId === memberId) {
+                    pwInput.value = pw;
+                    pwInput.title = "名簿（MemberMaster）のパスワード欄から自動入力";
+                }
+            } catch (e) {
+                console.error("初期パスワードの自動取得に失敗:", e);
+            }
+        }
+
+        function renderRegistrationsArea() {
+            const area = document.getElementById("registrationsArea");
+            area.innerHTML = PERIOD_FIELDS.map(p => `
+                <div class="period-block">
+                    <div class="period-label">${p.label}の登録講座</div>
+                    <div id="regList_${p.field}" class="reg-list"></div>
+                    <div class="reg-add-row">
+                        <select class="reg-day-select" data-field="${p.field}">
+                            ${DAYS.map(d => `<option value="${d}">${d}曜</option>`).join("")}
+                        </select>
+                        <select class="reg-slot-select" data-field="${p.field}">
+                            ${SLOTS.map(s => `<option value="${s}">${s.replace("時間目", "限")}</option>`).join("")}
+                        </select>
+                        <select class="reg-course-select" data-field="${p.field}"><option value="">読み込み中...</option></select>
+                        <button class="reg-add-btn" data-field="${p.field}">追加</button>
+                    </div>
+                </div>
+            `).join("");
+
+            PERIOD_FIELDS.forEach(p => renderRegList(`regList_${p.field}`, p.field));
+
+            area.querySelectorAll(".reg-day-select, .reg-slot-select").forEach(sel => {
+                sel.addEventListener("change", () => updateCourseOptions(sel.dataset.field));
+            });
+            area.querySelectorAll(".reg-add-btn").forEach(btn => {
+                btn.addEventListener("click", () => addRegistration(btn.dataset.field));
+            });
+
+            PERIOD_FIELDS.forEach(p => updateCourseOptions(p.field));
+        }
+
+        async function loadOptionsDoc(name) {
+            if (optionsCache[name]) return optionsCache[name];
+            try {
+                const snap = await getDoc(doc(db, "masters", name));
+                optionsCache[name] = snap.exists() ? snap.data() : {};
+            } catch (e) {
+                optionsCache[name] = {};
+            }
+            return optionsCache[name];
+        }
+
+        async function updateCourseOptions(field) {
+            const periodConf = PERIOD_FIELDS.find(p => p.field === field);
+            const area = document.getElementById("registrationsArea");
+            const daySelect = area.querySelector(`.reg-day-select[data-field="${field}"]`);
+            const slotSelect = area.querySelector(`.reg-slot-select[data-field="${field}"]`);
+            const courseSelect = area.querySelector(`.reg-course-select[data-field="${field}"]`);
+            if (!daySelect || !slotSelect || !courseSelect) return;
+
+            const day = daySelect.value;
+            const slot = slotSelect.value;
+            const grade = document.getElementById("f_grade").value;
+            const gradeKey = grade.includes("中3") ? "中3" : (grade.includes("中2") ? "中2" : "中1");
+
+            const options = await loadOptionsDoc(periodConf.optionsDoc);
+            const courses = (options[gradeKey] && options[gradeKey][day] && options[gradeKey][day][slot]) || [];
+
+            courseSelect.innerHTML = courses.length === 0
+                ? `<option value="">(この曜日・コマに講座なし)</option>`
+                : courses.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+        }
+
+        // 中3社会の所属教室による振り分け（生徒側 courses_j2〜j5.html の handleRegistration と同じルール）
+        const SOCIAL_GROUP_A_CDS = ["161", "162", "112", "170", "171", "172", "173", "174", "176", "177", "178", "119", "140", "150", "164", "113", "115", "120", "129", "130", "144", "146"];
+        const SOCIAL_SPLIT_RULES = {
+            nextRegistration:    { match: c => c === "中3歴史",   base: "中3歴史", suffix: "" },
+            period2Registration: { match: c => c === "中3公民Ⅱ", base: "中3公民", suffix: "Ⅱ" },
+            period3Registration: { match: c => c.includes("公民"), base: "中3公民", suffix: "Ⅲ" },
+            period4Registration: { match: c => c.includes("公民"), base: "中3公民", suffix: "Ⅳ" }
+        };
+
+        function applySocialSplit(field, grade, slot, courseName) {
+            const rule = SOCIAL_SPLIT_RULES[field];
+            if (!rule || !grade.includes("中3") || !rule.match(courseName)) return courseName;
+            const classroomCd = document.getElementById("f_cNo").value.trim().replace(/^0+/, "");
+            const isGroupA = SOCIAL_GROUP_A_CDS.includes(classroomCd);
+            let num;
+            if (slot === "1時間目") num = isGroupA ? "③" : "④";
+            else if (slot === "2時間目") num = isGroupA ? "①" : "②";
+            else return courseName;
+            return `${rule.base}${num}${rule.suffix}`;
+        }
+
+        function addRegistration(field) {
+            const area = document.getElementById("registrationsArea");
+            const daySelect = area.querySelector(`.reg-day-select[data-field="${field}"]`);
+            const slotSelect = area.querySelector(`.reg-slot-select[data-field="${field}"]`);
+            const courseSelect = area.querySelector(`.reg-course-select[data-field="${field}"]`);
+
+            const day = daySelect.value;
+            const slot = slotSelect.value;
+            if (!courseSelect.value) return alert("追加する講座を選択してください。");
+            const courseName = applySocialSplit(field, document.getElementById("f_grade").value, slot, courseSelect.value);
+
+            currentUser[field] = currentUser[field] || [];
+            const existing = currentUser[field];
+
+            if (existing.some(r => r.day === day && r.slot === slot && r.courseName === courseName)) {
+                return alert("すでに同じ講座が登録されています。");
+            }
+
+            // 同じ曜日・時限に別の講座がある場合のみ禁止（この期の登録の中だけで判定）
+            const sameDaySlot = existing.find(r => r.day === day && r.slot === slot);
+            if (sameDaySlot) {
+                return alert(`${day}曜 ${slot.replace("時間目", "限")} には既に「${sameDaySlot.courseName}」が登録されています。同じ時間帯に別の講座は登録できません。`);
+            }
+
+            existing.push({ day, slot, courseName });
+            renderRegList(`regList_${field}`, field);
+        }
+
+        document.getElementById("f_grade").addEventListener("change", () => {
+            if (!currentUser) return;
+            PERIOD_FIELDS.forEach(p => updateCourseOptions(p.field));
+        });
+
+        async function loadTelInfo(memberId) {
+            const el = document.getElementById("telInfo");
+            el.textContent = "読み込み中...";
+            try {
+                const res = await callAdmin("adminLookupPhone", { memberId });
+                if (!res.success) {
+                    el.textContent = "取得エラー: " + res.message;
+                    return;
+                }
+                if (!res.found) {
+                    el.textContent = "TELDataシートに一致する情報がありません。";
+                    return;
+                }
+                const d = res.data;
+                el.innerHTML = `電話番号: <b>${escapeHtml(d.phone) || "(未登録)"}</b>`;
+            } catch (e) {
+                el.textContent = "取得失敗: " + e.message;
+            }
+        }
+
+        async function openByMemberId(memberId) {
+            if (!allUsers.find(u => u.memberId === memberId)) {
+                try {
+                    const res = await callAdmin("adminGetUser", { memberId });
+                    if (!res.success) {
+                        alert("会員番号 " + memberId + " のマイページ利用者情報が見つかりません: " + res.message);
+                        return;
+                    }
+                    allUsers.push(res.user);
+                } catch (e) {
+                    alert("取得に失敗しました: " + e.message);
+                    return;
+                }
+            }
+            openEdit(memberId);
+        }
+
+        document.getElementById("phoneSearchBtn").addEventListener("click", searchByPhone);
+        document.getElementById("phoneSearchBox").addEventListener("keydown", (e) => {
+            if (e.key === "Enter") searchByPhone();
+        });
+
+        async function searchByPhone() {
+            const q = document.getElementById("phoneSearchBox").value.trim();
+            const resultsEl = document.getElementById("phoneResults");
+            if (q.length < 3) return alert("電話番号は3文字（数字）以上で入力してください。");
+
+            resultsEl.innerHTML = `<p style="color:#999; font-size:12px;">検索中...</p>`;
+            try {
+                const res = await callAdmin("adminSearchByPhone", { query: q });
+                if (!res.success) {
+                    resultsEl.innerHTML = `<p style="color:#d32f2f; font-size:12px;">${escapeHtml(res.message)}</p>`;
+                    return;
+                }
+                if (res.results.length === 0) {
+                    resultsEl.innerHTML = `<p style="color:#999; font-size:12px;">該当する電話番号がありません。</p>`;
+                    return;
+                }
+                resultsEl.innerHTML = res.results.map(r => `
+                    <div class="user-card" data-phone-id="${r.memberId}">
+                        <div>
+                            <div class="user-main"><b>${escapeHtml(r.name || "(氏名不明)")}</b></div>
+                            <div class="user-sub">会員番号: ${escapeHtml(r.memberId)} / 電話: ${escapeHtml(r.phone)}</div>
+                        </div>
+                        <i class="fas fa-chevron-right" style="color:#ccc;"></i>
+                    </div>
+                `).join("");
+                resultsEl.querySelectorAll("[data-phone-id]").forEach(card => {
+                    card.addEventListener("click", () => openByMemberId(card.dataset.phoneId));
+                });
+            } catch (e) {
+                resultsEl.innerHTML = `<p style="color:#d32f2f; font-size:12px;">${escapeHtml(e.message)}</p>`;
+            }
+        }
+
+        function renderRegList(elId, field) {
+            const el = document.getElementById(elId);
+            const items = currentUser[field] || [];
+            if (items.length === 0) {
+                el.innerHTML = `<div class="reg-empty">登録なし</div>`;
+                updateCurrentDayHint();
+                return;
+            }
+            el.innerHTML = items.map((r, i) => `
+                <div class="reg-item">
+                    <span>${escapeHtml(r.day || "")}曜 ${escapeHtml((r.slot || "").replace("時間目", "限"))} / ${escapeHtml(r.courseName || "")}</span>
+                    <button data-field="${field}" data-index="${i}">削除</button>
+                </div>
+            `).join("");
+            el.querySelectorAll("button").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const f = btn.dataset.field;
+                    const idx = Number(btn.dataset.index);
+                    currentUser[f] = (currentUser[f] || []).filter((_, i) => i !== idx);
+                    renderRegList(elId, f);
+                });
+            });
+            updateCurrentDayHint();
+        }
+
+        document.getElementById("closeBtn").addEventListener("click", () => {
+            document.getElementById("editOverlay").hidden = true;
+        });
+
+        document.getElementById("saveBtn").addEventListener("click", async () => {
+            const saveBtn = document.getElementById("saveBtn");
+            saveBtn.disabled = true;
+            saveBtn.textContent = "保存中...";
+
+            const updates = {
+                name: document.getElementById("f_name").value.trim(),
+                grade: document.getElementById("f_grade").value,
+                cNo: document.getElementById("f_cNo").value.trim(),
+                classroom: document.getElementById("f_classroom").value.trim(),
+                currentDay: document.getElementById("f_currentDay").value.trim(),
+                isFirst: document.getElementById("f_isFirst").checked ? "TRUE" : "FALSE",
+                disabled: document.getElementById("f_disabled").checked,
+                specialMessage: {
+                    enabled: document.getElementById("f_specialMsgEnabled").checked,
+                    text: document.getElementById("f_specialMsgText").value.trim(),
+                    linkText: document.getElementById("f_specialMsgLinkText").value.trim(),
+                    linkUrl: document.getElementById("f_specialMsgLinkUrl").value.trim()
+                },
+                nextRegistration: currentUser.nextRegistration || [],
+                period2Registration: currentUser.period2Registration || [],
+                period3Registration: currentUser.period3Registration || [],
+                period4Registration: currentUser.period4Registration || []
+            };
+
+            try {
+                const res = await callAdmin("adminUpdateUser", { memberId: currentUser.memberId, updates });
+                if (!res.success) {
+                    alert("保存に失敗しました: " + res.message);
+                } else {
+                    Object.assign(currentUser, updates);
+                    renderList();
+                    document.getElementById("editOverlay").hidden = true;
+                }
+            } catch (e) {
+                alert("保存に失敗しました: " + e.message);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = "保存する";
+            }
+        });
+
+        document.getElementById("applyPwBtn").addEventListener("click", async () => {
+            const pwInput = document.getElementById("f_newPassword");
+            const newPassword = pwInput.value.trim();
+            if (newPassword.length < 6) return alert("パスワードは6文字以上で入力してください。");
+            if (!confirm(`会員番号 ${currentUser.memberId} のパスワードを再設定します。よろしいですか？`)) return;
+
+            try {
+                const res = await callAdmin("adminSetPassword", { memberId: currentUser.memberId, newPassword });
+                if (res.success) {
+                    alert("パスワードを再設定しました。");
+                    pwInput.value = "";
+                    document.getElementById("f_isFirst").checked = true;
+                } else {
+                    alert("失敗しました: " + res.message);
+                }
+            } catch (e) {
+                alert("失敗しました: " + e.message);
+            }
+        });
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>お知らせ管理 - 管理者ページ</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #2c3e50 0%, #4a5f7a 100%); font-family: sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; min-height: 100vh; box-sizing: border-box; }
+        .container { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 620px; }
+        .back-link { position: sticky; top: 0; z-index: 20; display: block; background: white; margin: -25px -25px 15px; padding: 14px 25px; color: #34495e; text-decoration: none; font-size: 14px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.06); border-radius: 20px 20px 0 0; }
+        h2 { color: #333; margin: 0 0 15px; font-size: 20px; }
+        h3 { color: #333; font-size: 15px; margin: 25px 0 10px; border-top: 1px solid #eee; padding-top: 20px; }
+
+        .field-group { margin-bottom: 12px; text-align: left; }
+        .field-group label { display: block; font-size: 12px; font-weight: bold; color: #34495e; margin-bottom: 4px; }
+        .field-group input, .field-group select, .field-group textarea { width: 100%; padding: 9px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 14px; font-family: inherit; }
+        .field-group textarea { min-height: 80px; resize: vertical; }
+        .field-group input[type=file] { padding: 6px 0; border: none; }
+        .upload-status { font-size: 11px; color: #888; margin-top: 4px; }
+        .field-row { display: flex; gap: 10px; }
+        .field-row .field-group { flex: 1; }
+
+        #saveBtn, #cancelEditBtn { padding: 11px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; }
+        #saveBtn { background: #34495e; color: white; flex: 1; }
+        #cancelEditBtn { background: #eee; color: #333; display: none; }
+        .form-actions { display: flex; gap: 8px; }
+
+        .status-msg { color: #888; font-size: 13px; margin-bottom: 10px; }
+
+        .notice-card { border: 1px solid #eee; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+        .notice-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .notice-title { font-weight: bold; color: #333; font-size: 14px; }
+        .notice-date { font-size: 11px; color: #999; }
+        .notice-sub { font-size: 12px; color: #888; margin-bottom: 8px; }
+        .notice-actions { display: flex; gap: 6px; }
+        .notice-actions button { border: none; border-radius: 6px; padding: 5px 10px; font-size: 11px; cursor: pointer; }
+        .edit-btn { background: #e3f2fd; color: #1565c0; }
+        .delete-btn { background: #ffe0e0; color: #d32f2f; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="admin.html" class="back-link">← 管理者メニューへ戻る</a>
+        <h2><i class="fas fa-bullhorn"></i> お知らせ管理</h2>
+
+        <h3 id="formTitle">新しいお知らせを追加</h3>
+        <div class="field-row">
+            <div class="field-group">
+                <label>日付</label>
+                <input type="date" id="f_date">
+            </div>
+            <div class="field-group">
+                <label>重要度</label>
+                <select id="f_importance">
+                    <option value="高">高</option>
+                    <option value="中" selected>中</option>
+                    <option value="低">低</option>
+                </select>
+            </div>
+            <div class="field-group">
+                <label>対象学年</label>
+                <select id="f_grade">
+                    <option value="全員" selected>全員</option>
+                    <option value="中1">中1</option>
+                    <option value="中2">中2</option>
+                    <option value="中3">中3</option>
+                </select>
+            </div>
+        </div>
+        <div class="field-group">
+            <label>タイトル</label>
+            <input type="text" id="f_title" placeholder="お知らせのタイトル">
+        </div>
+        <div class="field-group">
+            <label>本文（リンクは &lt;a href="..."&gt;テキスト&lt;/a&gt; の形式で記述可）</label>
+            <textarea id="f_content" placeholder="お知らせの本文"></textarea>
+        </div>
+        <div class="field-group">
+            <label>画像をアップロード（任意・ローカルファイルから。10MBまで）</label>
+            <input type="file" id="f_imageFile" accept="image/*">
+            <div id="uploadStatus" class="upload-status"></div>
+        </div>
+        <div class="field-group">
+            <label>画像URL（アップロードすると自動入力されます。直接貼り付けも可）</label>
+            <input type="text" id="f_imageUrl" placeholder="https://...">
+        </div>
+        <div class="form-actions">
+            <button id="saveBtn">追加する</button>
+            <button id="cancelEditBtn">編集をやめる</button>
+        </div>
+
+        <h3>登録済みのお知らせ</h3>
+        <div id="statusMsg" class="status-msg">読み込み中...</div>
+        <div id="noticeList"></div>
+    </div>
+
+    <script type="module">
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+        import { requireAdmin, callAdmin, app } from "./admin-common.js";
+
+        const storage = getStorage(app);
+        let editingId = null;
+
+        document.getElementById("f_imageFile").addEventListener("change", async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const statusEl = document.getElementById("uploadStatus");
+
+            if (!file.type.startsWith("image/")) {
+                statusEl.textContent = "画像ファイルを選択してください。";
+                e.target.value = "";
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                statusEl.textContent = "10MB以下の画像を選択してください。";
+                e.target.value = "";
+                return;
+            }
+
+            statusEl.textContent = "アップロード中...";
+            try {
+                const path = `notices/${Date.now()}_${file.name}`;
+                const fileRef = ref(storage, path);
+                await uploadBytes(fileRef, file);
+                const url = await getDownloadURL(fileRef);
+                document.getElementById("f_imageUrl").value = url;
+                statusEl.textContent = "アップロード完了しました。";
+            } catch (err) {
+                statusEl.textContent = "アップロード失敗: " + err.message;
+            }
+        });
+
+        requireAdmin(() => {
+            loadNotices();
+        });
+
+        async function loadNotices() {
+            const statusMsg = document.getElementById("statusMsg");
+            statusMsg.textContent = "読み込み中...";
+            try {
+                const res = await callAdmin("adminListNotices");
+                if (!res.success) {
+                    statusMsg.textContent = "エラー: " + res.message;
+                    return;
+                }
+                statusMsg.textContent = `${res.notices.length}件`;
+                renderList(res.notices);
+            } catch (e) {
+                statusMsg.textContent = "読み込み失敗: " + e.message;
+            }
+        }
+
+        function renderList(notices) {
+            const listEl = document.getElementById("noticeList");
+            if (notices.length === 0) {
+                listEl.innerHTML = `<p style="color:#999; font-size:13px;">お知らせはまだありません。</p>`;
+                return;
+            }
+
+            listEl.innerHTML = notices.map(n => `
+                <div class="notice-card">
+                    <div class="notice-top">
+                        <span class="notice-title">${escapeHtml(n.title || "")}</span>
+                        <span class="notice-date">${escapeHtml(n.date || "")}</span>
+                    </div>
+                    <div class="notice-sub">重要度: ${escapeHtml(n.importance || "")} / 対象: ${escapeHtml(n.grade || "")}</div>
+                    <div class="notice-actions">
+                        <button class="edit-btn" data-id="${n.id}">編集</button>
+                        <button class="delete-btn" data-id="${n.id}">削除</button>
+                    </div>
+                </div>
+            `).join("");
+
+            listEl.querySelectorAll(".edit-btn").forEach(btn => {
+                btn.addEventListener("click", () => startEdit(notices.find(n => n.id === btn.dataset.id)));
+            });
+            listEl.querySelectorAll(".delete-btn").forEach(btn => {
+                btn.addEventListener("click", () => deleteNotice(btn.dataset.id));
+            });
+        }
+
+        function startEdit(notice) {
+            if (!notice) return;
+            editingId = notice.id;
+            document.getElementById("formTitle").textContent = "お知らせを編集";
+            document.getElementById("f_date").value = toDateInputValue(notice.date);
+            document.getElementById("f_importance").value = notice.importance || "中";
+            document.getElementById("f_grade").value = notice.grade || "全員";
+            document.getElementById("f_title").value = notice.title || "";
+            document.getElementById("f_content").value = notice.content || "";
+            document.getElementById("f_imageUrl").value = notice.imageUrl || "";
+            document.getElementById("f_imageFile").value = "";
+            document.getElementById("uploadStatus").textContent = "";
+            document.getElementById("saveBtn").textContent = "更新する";
+            document.getElementById("cancelEditBtn").style.display = "block";
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        function resetForm() {
+            editingId = null;
+            document.getElementById("formTitle").textContent = "新しいお知らせを追加";
+            document.getElementById("f_date").value = "";
+            document.getElementById("f_importance").value = "中";
+            document.getElementById("f_grade").value = "全員";
+            document.getElementById("f_title").value = "";
+            document.getElementById("f_content").value = "";
+            document.getElementById("f_imageUrl").value = "";
+            document.getElementById("f_imageFile").value = "";
+            document.getElementById("uploadStatus").textContent = "";
+            document.getElementById("saveBtn").textContent = "追加する";
+            document.getElementById("cancelEditBtn").style.display = "none";
+        }
+
+        document.getElementById("cancelEditBtn").addEventListener("click", resetForm);
+
+        document.getElementById("saveBtn").addEventListener("click", async () => {
+            const date = document.getElementById("f_date").value;
+            const title = document.getElementById("f_title").value.trim();
+            if (!date || !title) return alert("日付とタイトルは必須です。");
+
+            const notice = {
+                date,
+                importance: document.getElementById("f_importance").value,
+                grade: document.getElementById("f_grade").value,
+                title,
+                content: document.getElementById("f_content").value.trim(),
+                imageUrl: document.getElementById("f_imageUrl").value.trim()
+            };
+
+            const saveBtn = document.getElementById("saveBtn");
+            saveBtn.disabled = true;
+            try {
+                const res = await callAdmin("adminSaveNotice", { id: editingId, notice });
+                if (res.success) {
+                    resetForm();
+                    loadNotices();
+                } else {
+                    alert("保存に失敗しました: " + res.message);
+                }
+            } catch (e) {
+                alert("保存に失敗しました: " + e.message);
+            } finally {
+                saveBtn.disabled = false;
+            }
+        });
+
+        async function deleteNotice(id) {
+            if (!confirm("このお知らせを削除します。よろしいですか？")) return;
+            try {
+                const res = await callAdmin("adminDeleteNotice", { id });
+                if (res.success) {
+                    if (editingId === id) resetForm();
+                    loadNotices();
+                } else {
+                    alert("削除に失敗しました: " + res.message);
+                }
+            } catch (e) {
+                alert("削除に失敗しました: " + e.message);
+            }
+        }
+
+        function toDateInputValue(dateStr) {
+            if (!dateStr) return "";
+            return dateStr.replace(/\//g, "-");
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+        }
+    </script>
+</body>
+</html>
